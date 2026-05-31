@@ -280,6 +280,193 @@ fn enforces_caps_dedup_and_malformed_json_ld_safety() {
 }
 
 #[test]
+fn deserializes_existing_structured_facts_json_shape_with_defaults() {
+    let json = r#"{
+        "links":[{"text":"Docs","href":"https://example.test/docs","title":"Docs title"}],
+        "images":[{"src":"https://example.test/hero.png","alt":"Hero"}],
+        "metadata":[{"source":"json_ld","path":"Product.name","item_type":"Product","value":"Widget"}],
+        "tables":[{"caption":"Pricing","headers":["Plan"],"rows":[["Pro"]]}]
+    }"#;
+
+    let facts: rs_trafilatura::StructuredFacts = serde_json::from_str(json).unwrap();
+    assert_eq!(facts.links[0].href, "https://example.test/docs");
+    assert!(facts.links[0].classes.is_empty());
+    assert_eq!(
+        facts.links[0].dom_region,
+        rs_trafilatura::DomRegion::Unknown
+    );
+    assert!(facts.media.is_empty());
+    assert!(facts.sections.is_empty());
+    assert_eq!(facts.metadata[0].kind, None);
+}
+
+#[test]
+fn collects_all_safe_visible_links_with_url_parts_classes_and_context() {
+    let html = r##"
+        <html><body>
+          <header><nav><a href="/home">Home</a></nav></header>
+          <article>
+            <h2>Downloads</h2>
+            <a href="/files/report.pdf?ref=Parser%20Eval#top" rel="license noopener" target="_blank" download="report-final.pdf">Download report</a>
+            <a href="mailto:support@example.test?subject=Parser%20Eval&subject=Again">Email support</a>
+            <a href="tel:+15551234567">Call us</a>
+            <a href="#details">Details</a>
+          </article>
+          <footer><a href="/privacy">Privacy</a></footer>
+        </body></html>
+    "##;
+
+    let result = extract_with_options(html, &options_with_structured_facts()).unwrap();
+    let facts = result.structured_facts.unwrap();
+
+    assert_eq!(facts.links.len(), 6);
+    let download = facts
+        .links
+        .iter()
+        .find(|l| l.text == "Download report")
+        .unwrap();
+    assert_eq!(
+        download.raw_href.as_deref(),
+        Some("/files/report.pdf?ref=Parser%20Eval#top")
+    );
+    assert_eq!(download.scheme.as_deref(), Some("https"));
+    assert_eq!(download.host.as_deref(), Some("example.com"));
+    assert_eq!(download.path.as_deref(), Some("/files/report.pdf"));
+    assert_eq!(download.filename.as_deref(), Some("report-final.pdf"));
+    assert_eq!(download.fragment.as_deref(), Some("top"));
+    assert_eq!(download.query[0].key, "ref");
+    assert_eq!(download.query[0].decoded_value, "Parser Eval");
+    assert!(download
+        .classes
+        .contains(&rs_trafilatura::LinkClass::Download));
+    assert!(download.classes.contains(&rs_trafilatura::LinkClass::Pdf));
+    assert_eq!(download.dom_region, rs_trafilatura::DomRegion::Article);
+    assert_eq!(download.nearest_heading.as_deref(), Some("Downloads"));
+
+    let mail = facts
+        .links
+        .iter()
+        .find(|l| l.email.as_deref() == Some("support@example.test"))
+        .unwrap();
+    assert_eq!(mail.scheme.as_deref(), Some("mailto"));
+    assert_eq!(mail.query.len(), 2);
+    assert_eq!(mail.query[0].decoded_value, "Parser Eval");
+    assert!(mail.classes.contains(&rs_trafilatura::LinkClass::Email));
+    assert!(mail.classes.contains(&rs_trafilatura::LinkClass::Contact));
+
+    let tel = facts
+        .links
+        .iter()
+        .find(|l| l.scheme.as_deref() == Some("tel"))
+        .unwrap();
+    assert_eq!(tel.phone.as_deref(), Some("+15551234567"));
+    assert!(tel.classes.contains(&rs_trafilatura::LinkClass::Phone));
+
+    let footer = facts.links.iter().find(|l| l.text == "Privacy").unwrap();
+    assert_eq!(footer.dom_region, rs_trafilatura::DomRegion::Footer);
+    assert!(footer.classes.contains(&rs_trafilatura::LinkClass::Legal));
+}
+
+#[test]
+fn captures_sections_media_and_semantic_metadata_aliases_without_changing_content() {
+    let html = r#"
+        <html>
+          <head>
+            <link rel="canonical" href="/canonical-product">
+            <link rel="license" href="/license">
+            <script type="application/ld+json">
+            {"@type":"Product","name":"Widget Pro","sku":"W-1","offers":[{"price":"19.99","priceCurrency":"USD"}],"license":"/license"}
+            </script>
+          </head>
+          <body><article>
+            <h1>Widget Pro</h1>
+            <p>Main article text with enough words to extract cleanly and keep the extractor satisfied.</p>
+            <figure>
+              <video poster="/poster.jpg"><source src="/demo.webm" type="video/webm"><track src="/captions.vtt" kind="captions" srclang="en" label="English"></video>
+              <figcaption>Demo video</figcaption>
+            </figure>
+            <figure>
+              <audio><source src="/intro.mp3" type="audio/mpeg"></audio>
+              <figcaption>Intro audio</figcaption>
+            </figure>
+          </article></body>
+        </html>
+    "#;
+
+    let baseline = extract_with_options(html, &Options::default()).unwrap();
+    let result = extract_with_options(html, &options_with_structured_facts()).unwrap();
+    assert_eq!(baseline.content_text, result.content_text);
+    assert_eq!(baseline.content_html, result.content_html);
+    assert_eq!(baseline.content_markdown, result.content_markdown);
+
+    let facts = result.structured_facts.unwrap();
+    assert!(facts
+        .sections
+        .iter()
+        .any(|s| s.heading == "Widget Pro" && s.level == 1));
+    assert_eq!(facts.media.len(), 2);
+    let video = facts
+        .media
+        .iter()
+        .find(|m| m.kind == rs_trafilatura::MediaKind::Video)
+        .unwrap();
+    assert_eq!(
+        video.poster.as_deref(),
+        Some("https://example.com/poster.jpg")
+    );
+    assert_eq!(video.sources[0].src, "https://example.com/demo.webm");
+    assert_eq!(
+        video.tracks[0].src.as_deref(),
+        Some("https://example.com/captions.vtt")
+    );
+    assert_eq!(video.caption.as_deref(), Some("Demo video"));
+
+    assert!(facts.metadata.iter().any(|m| m.kind
+        == Some(rs_trafilatura::MetadataKind::ProductName)
+        && m.value == "Widget Pro"));
+    assert!(facts
+        .metadata
+        .iter()
+        .any(|m| m.kind == Some(rs_trafilatura::MetadataKind::ProductPrice) && m.value == "19.99"));
+    assert!(facts.metadata.iter().any(|m| m.kind
+        == Some(rs_trafilatura::MetadataKind::CanonicalUrl)
+        && m.value == "https://example.com/canonical-product"));
+}
+
+#[test]
+fn renders_compact_high_value_fact_block_without_low_value_link_dump() {
+    let html = r#"
+        <html><body>
+          <nav><a href="/home">Home</a><a href="/login">Login</a></nav>
+          <article>
+            <h2>Support</h2>
+            <a href="mailto:support@example.test?subject=Parser%20Eval">Email support</a>
+            <a href="/api/reference">API Reference</a>
+          </article>
+          <footer><a href="/privacy">Privacy</a></footer>
+        </body></html>
+    "#;
+    let facts = extract_with_options(html, &options_with_structured_facts())
+        .unwrap()
+        .structured_facts
+        .unwrap();
+    let rendered = rs_trafilatura::render_structured_facts_for_extraction(
+        &facts,
+        &rs_trafilatura::StructuredFactsRenderOptions {
+            max_chars: 1200,
+            ..Default::default()
+        },
+    );
+
+    assert!(rendered.contains("support@example.test"));
+    assert!(rendered.contains("Parser Eval"));
+    assert!(rendered.contains("API Reference"));
+    assert!(rendered.contains("omitted"));
+    assert!(!rendered.contains("/privacy"));
+    assert!(!rendered.contains("/login"));
+}
+
+#[test]
 fn extract_stdin_structured_facts_flag_emits_empty_arrays_and_preserves_markdown_mode() {
     let html = r#"<html><body><article><p>Main article text with enough words to extract cleanly and keep the extractor satisfied.</p></article></body></html>"#;
     let bin = env!("CARGO_BIN_EXE_extract_stdin");

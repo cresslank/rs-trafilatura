@@ -177,7 +177,9 @@ pub use error::{Error, Result};
 pub use options::Options;
 pub use result::{ExtractResult, ImageData, Metadata};
 pub use structured_facts::{
-    ImageFact, LinkFact, MetadataFact, StructuredFacts, StructuredFactsOptions, TableFact,
+    render_structured_facts_for_extraction, DomRegion, ImageFact, LinkClass, LinkFact, MediaFact,
+    MediaKind, MediaSourceFact, MediaTrackFact, MetadataFact, MetadataKind, QueryParamFact,
+    SectionFact, StructuredFacts, StructuredFactsOptions, StructuredFactsRenderOptions, TableFact,
 };
 
 /// Extracts main content from an HTML document using default options.
