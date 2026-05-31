@@ -531,6 +531,72 @@ fn renders_attribute_media_table_and_visible_key_value_evidence_generically() {
 }
 
 #[test]
+fn firecrawl_seam_payloads_render_relative_image_and_heading_evidence_without_url() {
+    let image_html = r#"
+        <!DOCTYPE html><html lang="en"><body><main>
+          <h1>Image Attribute Semantics</h1>
+          <p>Charts should retain useful non-visible image semantics.</p>
+          <figure>
+            <img data-src="/assets/q4-revenue.png" alt="Quarterly revenue chart showing 18 percent Q4 growth" title="Q4 revenue rose 18 percent">
+            <figcaption>Revenue chart</figcaption>
+          </figure>
+          <p>The prose mentions a chart, but the numeric growth claim appears in attributes.</p>
+        </main></body></html>
+    "#;
+    let image_facts = extract_with_options(
+        image_html,
+        &Options {
+            structured_facts: Some(StructuredFactsOptions::default()),
+            ..Options::default()
+        },
+    )
+    .unwrap()
+    .structured_facts
+    .unwrap();
+    let image_rendered = rs_trafilatura::render_structured_facts_for_extraction(
+        &image_facts,
+        &rs_trafilatura::StructuredFactsRenderOptions {
+            max_chars: 1200,
+            ..Default::default()
+        },
+    );
+
+    assert!(image_rendered.contains("Quarterly revenue chart showing 18 percent Q4 growth"));
+    assert!(image_rendered.contains("Q4 revenue rose 18 percent"));
+    assert!(image_rendered.contains("Revenue chart"));
+    assert!(image_rendered.contains("/assets/q4-revenue.png"));
+
+    let product_html = r#"
+        <!DOCTYPE html><html><body><main>
+          <h1>Widget Pro</h1>
+          <p>Visible price: $249.00</p>
+          <p>Status: Ships today</p>
+        </main></body></html>
+    "#;
+    let product_facts = extract_with_options(
+        product_html,
+        &Options {
+            structured_facts: Some(StructuredFactsOptions::default()),
+            ..Options::default()
+        },
+    )
+    .unwrap()
+    .structured_facts
+    .unwrap();
+    let product_rendered = rs_trafilatura::render_structured_facts_for_extraction(
+        &product_facts,
+        &rs_trafilatura::StructuredFactsRenderOptions {
+            max_chars: 1200,
+            ..Default::default()
+        },
+    );
+
+    assert!(product_rendered.contains("Widget Pro"));
+    assert!(product_rendered.contains("Visible price: $249.00"));
+    assert!(product_rendered.contains("Status: Ships today"));
+}
+
+#[test]
 fn structured_facts_sections_respect_total_character_budget() {
     let html = r#"
         <html><body><article>

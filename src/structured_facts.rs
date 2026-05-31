@@ -335,6 +335,22 @@ pub fn render_structured_facts_for_extraction(
         .iter()
         .filter(|l| is_high_value_link(l))
         .collect();
+    let render_headings = !facts.sections.is_empty()
+        && high_value_links.is_empty()
+        && facts.images.is_empty()
+        && facts.media.is_empty()
+        && facts.tables.is_empty();
+    if render_headings {
+        out.push_str("\nHeadings:\n");
+        for section in facts.sections.iter().take(options.max_metadata) {
+            append_capped(&mut out, options.max_chars, "- h");
+            append_capped(&mut out, options.max_chars, &section.level.to_string());
+            append_capped(&mut out, options.max_chars, ": ");
+            append_capped(&mut out, options.max_chars, &section.heading);
+            append_capped(&mut out, options.max_chars, "\n");
+        }
+    }
+
     if !high_value_links.is_empty() {
         out.push_str("\nLinks:\n");
         for link in high_value_links.iter().take(options.max_links) {
@@ -684,8 +700,7 @@ fn extract_images(
         let Some(raw_src) = raw_src else {
             continue;
         };
-        let Some(normalized_src) = normalize_url(raw_src.trim(), base_url, &["http", "https"])
-        else {
+        let Some(normalized_src) = normalize_image_src(raw_src.trim(), base_url) else {
             continue;
         };
         let fact = ImageFact {
@@ -1511,6 +1526,28 @@ fn normalize_url(raw: &str, base_url: Option<&str>, allowed_schemes: &[&str]) ->
     allowed_schemes
         .contains(&joined.scheme())
         .then(|| joined.to_string())
+}
+
+fn normalize_image_src(raw: &str, base_url: Option<&str>) -> Option<String> {
+    normalize_url(raw, base_url, &["http", "https"]).or_else(|| {
+        if base_url.is_none() && is_safe_relative_url(raw) {
+            Some(raw.to_string())
+        } else {
+            None
+        }
+    })
+}
+
+fn is_safe_relative_url(raw: &str) -> bool {
+    if raw.is_empty() || raw.starts_with("//") || raw.chars().any(char::is_control) {
+        return false;
+    }
+    let first_segment = raw
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    !first_segment.contains(':')
 }
 
 struct UrlParts {
