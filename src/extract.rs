@@ -34,12 +34,7 @@ use crate::url_utils::{extract_filename, filenames_match};
 /// Main entry point for content extraction.
 #[allow(clippy::unnecessary_wraps)]
 pub(crate) fn extract_content(html: &str, options: &Options) -> Result<ExtractResult> {
-    if cfg!(debug_assertions) {
-        eprintln!(
-            "DEBUG: Starting content extraction (HTML length: {} chars)",
-            html.len()
-        );
-    }
+    tracing::debug!(html_len = html.len(), "starting content extraction");
 
     // Parse HTML document
     let document = Document::from(html);
@@ -97,18 +92,16 @@ pub(crate) fn extract_content(html: &str, options: &Options) -> Result<ExtractRe
     // Store detected page type in metadata
     metadata.page_type = Some(detected_page_type.as_str().to_string());
 
-    if cfg!(debug_assertions) {
-        eprintln!(
-            "DEBUG: Page type: {detected_page_type} (confidence: {classification_confidence:?})"
-        );
-    }
+    tracing::debug!(
+        page_type = %detected_page_type,
+        ?classification_confidence,
+        "page type classified"
+    );
 
-    if cfg!(debug_assertions) {
-        if let Some(ref title) = metadata.title {
-            eprintln!("DEBUG: Extracted metadata - Title: {} chars", title.len());
-        } else {
-            eprintln!("DEBUG: No title found in metadata");
-        }
+    if let Some(ref title) = metadata.title {
+        tracing::debug!(title_len = title.len(), "metadata title extracted");
+    } else {
+        tracing::debug!("no metadata title extracted");
     }
 
     // Create document backup BEFORE cleaning for fallback extraction
@@ -430,16 +423,13 @@ pub(crate) fn extract_content(html: &str, options: &Options) -> Result<ExtractRe
         Vec::new()
     };
 
-    if cfg!(debug_assertions) {
-        eprintln!("DEBUG: Extraction summary:");
-        eprintln!("  Content text: {} chars", content_text.len());
-        eprintln!(
-            "  Comments: {} chars",
-            comments_text.as_ref().map_or(0, std::string::String::len)
-        );
-        eprintln!("  Images: {}", images.len());
-        eprintln!("  Warnings: {}", warnings.len());
-    }
+    tracing::debug!(
+        content_text_len = content_text.len(),
+        comments_len = comments_text.as_ref().map_or(0, std::string::String::len),
+        images_len = images.len(),
+        warnings_len = warnings.len(),
+        "extraction summary"
+    );
 
     // Compute extraction quality confidence
     let extraction_quality = compute_extraction_quality_heuristic(
@@ -492,13 +482,11 @@ pub(crate) fn extract_content(html: &str, options: &Options) -> Result<ExtractRe
 
     let final_result = apply_final_validations(result, &document, options);
 
-    if cfg!(debug_assertions) {
-        if let Ok(ref res) = final_result {
-            eprintln!(
-                "DEBUG: Extraction complete! Final content: {} chars",
-                res.content_text.len()
-            );
-        }
+    if let Ok(ref res) = final_result {
+        tracing::debug!(
+            final_content_len = res.content_text.len(),
+            "extraction complete"
+        );
     }
 
     final_result
@@ -1386,9 +1374,10 @@ fn try_length_based_fallback(
         return None;
     }
 
-    if cfg!(debug_assertions) {
-        eprintln!("rs-trafilatura: primary extraction too short ({primary_text_len} chars); trying fallback");
-    }
+    tracing::debug!(
+        primary_text_len,
+        "primary extraction too short; trying fallback"
+    );
 
     // Try alternative selectors with relaxed filtering
     let fallback_selectors = [
@@ -1409,9 +1398,7 @@ fn try_length_based_fallback(
     let mut best_len = primary_text_len;
 
     for selector in &fallback_selectors {
-        if cfg!(debug_assertions) {
-            eprintln!("rs-trafilatura: fallback trying selector '{selector}'");
-        }
+        tracing::debug!(selector, "trying length-based fallback selector");
 
         // Try to find content with this selector
         let selection = doc.select(selector);
@@ -1454,9 +1441,12 @@ fn try_length_based_fallback(
             let text_len = text.trim().len();
 
             if text_len > best_len && text_len >= 200 {
-                if cfg!(debug_assertions) {
-                    eprintln!("rs-trafilatura: fallback selector '{selector}' found {text_len} chars (better than {best_len})");
-                }
+                tracing::debug!(
+                    selector,
+                    text_len,
+                    best_len,
+                    "fallback selector improved extraction"
+                );
 
                 best_text = text;
                 best_len = text_len;
@@ -1466,16 +1456,19 @@ fn try_length_based_fallback(
                 if text_len >= primary_text_len * 2 {
                     break;
                 }
-            } else if cfg!(debug_assertions) {
-                eprintln!("rs-trafilatura: fallback selector '{selector}' only found {text_len} chars (not better)");
+            } else {
+                tracing::debug!(
+                    selector,
+                    text_len,
+                    best_len,
+                    "fallback selector did not improve extraction"
+                );
             }
         }
     }
 
     if best_len > primary_text_len {
-        if cfg!(debug_assertions) {
-            eprintln!("rs-trafilatura: fallback successful! Improved from {primary_text_len} to {best_len} chars");
-        }
+        tracing::debug!(primary_text_len, best_len, "fallback improved extraction");
         Some((
             best_text,
             if best_html.is_empty() {
@@ -1485,11 +1478,7 @@ fn try_length_based_fallback(
             },
         ))
     } else {
-        if cfg!(debug_assertions) {
-            eprintln!(
-                "rs-trafilatura: fallback did not improve results (best was {best_len} chars)"
-            );
-        }
+        tracing::debug!(best_len, "fallback did not improve extraction");
         None
     }
 }
@@ -1500,34 +1489,26 @@ fn extract_main_content_with_profile(
     page_title: Option<&str>,
     profile_selectors: &[&str],
 ) -> Result<(String, Option<String>)> {
-    if cfg!(debug_assertions) {
-        eprintln!("DEBUG: Starting main content extraction");
-    }
+    tracing::debug!("starting main content extraction");
 
     // Try semantic selectors first (including profile-specific ones)
     let mut content_node = find_main_content_node_with_profile(doc, options, profile_selectors);
 
-    if cfg!(debug_assertions) {
-        if let Some(node) = &content_node {
-            if let Some(tag) = dom::tag_name(node) {
-                eprintln!("DEBUG: Found content node with tag: {tag}");
-            }
-        } else {
-            eprintln!("DEBUG: No semantic content node found, will use body extraction");
+    if let Some(node) = &content_node {
+        if let Some(tag) = dom::tag_name(node) {
+            tracing::debug!(tag, "found semantic content node");
         }
+    } else {
+        tracing::debug!("no semantic content node found; using body extraction");
     }
 
     let (mut text, mut html) = if let Some(node) = &content_node {
         let text = extract_filtered_text_with_title(node, options, page_title);
         let html = extract_filtered_html(node, options);
-        if cfg!(debug_assertions) {
-            eprintln!("DEBUG: Extracted from content node: {} chars", text.len());
-        }
+        tracing::debug!(text_len = text.len(), "extracted from content node");
         (text, html)
     } else {
-        if cfg!(debug_assertions) {
-            eprintln!("DEBUG: Using body extraction fallback");
-        }
+        tracing::debug!("using body extraction fallback");
         (
             extract_body_content(doc, options)?,
             extract_body_content_html(doc, options)?,
@@ -1588,9 +1569,9 @@ fn extract_main_content_with_profile(
     }
 
     if text.is_empty() {
-        if cfg!(debug_assertions) {
-            eprintln!("rs-trafilatura: selected content node produced empty text; falling back to body extraction");
-        }
+        tracing::debug!(
+            "selected content node produced empty text; falling back to body extraction"
+        );
         text = extract_body_content(doc, options)?;
         html = extract_body_content_html(doc, options)?;
         extracted_from_content_node = false;
@@ -1600,9 +1581,7 @@ fn extract_main_content_with_profile(
     // with less aggressive filtering (allow some boilerplate classes)
     if text.is_empty() {
         if let Some(node) = find_main_content_node_with_options(doc, options) {
-            if cfg!(debug_assertions) {
-                eprintln!("rs-trafilatura: body extraction empty; trying content node with relaxed filtering");
-            }
+            tracing::debug!("body extraction empty; trying content node with relaxed filtering");
             text = extract_filtered_text_allow_boilerplate(&node, options);
             if !text.is_empty() {
                 html = extract_filtered_html_allow_boilerplate(&node, options);
@@ -1642,21 +1621,17 @@ fn extract_main_content_with_profile(
     // }
 
     if text.is_empty() {
-        if cfg!(debug_assertions) {
-            eprintln!("DEBUG: Extraction failed - no content found");
-        }
+        tracing::debug!("extraction failed; no content found");
         return Err(Error::NoContent);
     }
 
     // TODO: Generate content_html when needed
     let content_html = if html.is_empty() { None } else { Some(html) };
 
-    if cfg!(debug_assertions) {
-        eprintln!(
-            "DEBUG: Extraction complete! Final text length: {} chars",
-            text.len()
-        );
-    }
+    tracing::debug!(
+        final_text_len = text.len(),
+        "main content extraction complete"
+    );
 
     Ok((text, content_html))
 }
@@ -2002,9 +1977,7 @@ fn find_main_content_node_with_profile<'a>(
             // Verify it has meaningful text content (not just boilerplate containers)
             let text_len = sel.text().trim().len();
             if text_len > 100 {
-                if cfg!(debug_assertions) {
-                    eprintln!("DEBUG: Profile selector matched: {sel_str} ({text_len} chars)");
-                }
+                tracing::debug!(selector = *sel_str, text_len, "profile selector matched");
                 return Some(sel);
             }
         }
