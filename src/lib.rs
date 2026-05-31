@@ -45,6 +45,7 @@ mod extract;
 mod options;
 mod patterns;
 mod result;
+mod structured_facts;
 
 /// Page type classification (URL heuristics, HTML signals, ML classifier).
 pub mod page_type;
@@ -70,18 +71,21 @@ pub mod spider_integration;
 // Internal modules — not part of the public API
 pub(crate) mod dom;
 pub(crate) mod etree;
-pub(crate) mod lru;
-pub(crate) mod selector;
-pub(crate) mod html_processing;
 pub(crate) mod extractor;
-pub(crate) mod metadata;
-pub(crate) mod url_utils;
+pub(crate) mod html_processing;
 pub(crate) mod link_density;
+pub(crate) mod lru;
+pub(crate) mod metadata;
+pub(crate) mod selector;
+pub(crate) mod url_utils;
 
 // Public API - re-exports
 pub use error::{Error, Result};
 pub use options::Options;
 pub use result::{ExtractResult, ImageData, Metadata};
+pub use structured_facts::{
+    ImageFact, LinkFact, MetadataFact, StructuredFacts, StructuredFactsOptions, TableFact,
+};
 
 /// Extracts main content from an HTML document using default options.
 ///

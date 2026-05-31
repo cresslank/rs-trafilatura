@@ -29,6 +29,7 @@ thread_local! {
 }
 use crate::selector;
 use crate::result::{ExtractResult, ImageData};
+use crate::structured_facts;
 use crate::url_utils::{extract_filename, filenames_match};
 
 /// Main entry point for content extraction.
@@ -148,6 +149,16 @@ pub(crate) fn extract_content(html: &str, options: &Options) -> Result<ExtractRe
     if profile.comments_are_content {
         COMMENTS_ARE_CONTENT.with(|c| c.set(true));
     }
+
+    // Structured facts are opt-in and come from the pre-cleaning backup so
+    // attribute-rich links/images/tables/metadata survive HTML cleaning.
+    let structured_facts = options.structured_facts.as_ref().map(|facts_options| {
+        structured_facts::extract_structured_facts(
+            &doc_backup,
+            options.url.as_deref(),
+            facts_options,
+        )
+    });
 
     // Clean document before content extraction (go-trafilatura: docCleaning)
     // Uses page-type-specific boilerplate selectors and preserve_tags.
@@ -418,6 +429,7 @@ pub(crate) fn extract_content(html: &str, options: &Options) -> Result<ExtractRe
         classification_confidence,
         extraction_quality,
         warnings,
+        structured_facts,
     };
 
     // EPIC-02: Generate Markdown output if enabled

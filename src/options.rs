@@ -3,6 +3,8 @@
 //! The `Options` struct controls extraction behavior, allowing users to
 //! tune the precision/recall tradeoff and enable/disable specific features.
 
+use crate::structured_facts::StructuredFactsOptions;
+
 /// Configuration options for content extraction.
 ///
 /// All fields are public for easy configuration. Use `Default::default()`
@@ -109,7 +111,6 @@ pub struct Options {
     pub min_extracted_size: usize,
 
     // === Additional threshold fields (Story 6-1) ===
-
     /// Minimum text length for extracted content (characters).
     ///
     /// Content shorter than this is considered insufficient.
@@ -230,6 +231,11 @@ pub struct Options {
     ///
     /// Default: `None`
     pub page_type: Option<crate::page_type::PageType>,
+
+    /// Bounded structured facts extracted from the pre-cleaning DOM.
+    ///
+    /// Default: `None`
+    pub structured_facts: Option<StructuredFactsOptions>,
 }
 
 impl Default for Options {
@@ -265,6 +271,7 @@ impl Default for Options {
             // EPIC-02: Markdown output
             output_markdown: false,
             page_type: None,
+            structured_facts: None,
         }
     }
 }
@@ -308,6 +315,7 @@ mod tests {
         assert!(!opts.include_title_in_content);
         // EPIC-02: Markdown output
         assert!(!opts.output_markdown);
+        assert!(opts.structured_facts.is_none());
     }
 
     #[test]

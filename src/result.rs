@@ -6,6 +6,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::structured_facts::StructuredFacts;
+
 /// Structured image data extracted from content.
 ///
 /// Contains comprehensive metadata about each image found in the document,
@@ -81,6 +83,9 @@ pub struct ExtractResult {
     /// - Individual metadata fields failed to extract
     /// - Recoverable parsing errors
     pub warnings: Vec<String>,
+
+    /// Bounded opt-in structured facts from the pre-cleaning DOM.
+    pub structured_facts: Option<StructuredFacts>,
 }
 
 /// Metadata extracted from an HTML document.
