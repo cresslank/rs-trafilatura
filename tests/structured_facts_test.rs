@@ -441,7 +441,7 @@ fn renders_compact_high_value_fact_block_without_low_value_link_dump() {
           <article>
             <h2>Support</h2>
             <a href="mailto:support@example.test?subject=Parser%20Eval">Email support</a>
-            <a href="/api/reference">API Reference</a>
+            <a href="/api/reference?access_token=s3cr3t&subject=Visible">API Reference</a>
           </article>
           <footer><a href="/privacy">Privacy</a></footer>
         </body></html>
@@ -461,9 +461,43 @@ fn renders_compact_high_value_fact_block_without_low_value_link_dump() {
     assert!(rendered.contains("support@example.test"));
     assert!(rendered.contains("Parser Eval"));
     assert!(rendered.contains("API Reference"));
+    assert!(rendered.contains("access_token=\"[redacted]\""));
+    assert!(rendered.contains("access_token=[redacted]"));
+    assert!(rendered.contains("Visible"));
+    assert!(!rendered.contains("s3cr3t"));
     assert!(rendered.contains("omitted"));
     assert!(!rendered.contains("/privacy"));
     assert!(!rendered.contains("/login"));
+}
+
+#[test]
+fn structured_facts_sections_respect_total_character_budget() {
+    let html = r#"
+        <html><body><article>
+          <h1>Very long heading that would exceed a tiny structured facts budget</h1>
+          <p>Main article text with enough words to extract cleanly and keep the extractor satisfied.</p>
+        </article></body></html>
+    "#;
+    let options = Options {
+        url: Some("https://example.com/base/page.html".to_string()),
+        structured_facts: Some(StructuredFactsOptions {
+            max_total_chars: 1,
+            ..StructuredFactsOptions::default()
+        }),
+        ..Options::default()
+    };
+
+    let facts = extract_with_options(html, &options)
+        .unwrap()
+        .structured_facts
+        .unwrap();
+
+    assert!(facts.sections.is_empty());
+    assert!(facts.links.is_empty());
+    assert!(facts.images.is_empty());
+    assert!(facts.metadata.is_empty());
+    assert!(facts.media.is_empty());
+    assert!(facts.tables.is_empty());
 }
 
 #[test]

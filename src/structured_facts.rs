@@ -283,9 +283,14 @@ pub(crate) fn extract_structured_facts(
     let mut budget = CharBudget::new(options.max_total_chars);
     let headings = collect_headings(doc, options.max_sections, options.max_field_chars);
 
-    facts.sections = headings.iter().map(|h| h.fact.clone()).collect();
-    let section_chars = facts.sections.iter().map(section_fact_chars).sum();
-    let _ = budget.try_consume(section_chars);
+    for heading in &headings {
+        if budget.exhausted() {
+            break;
+        }
+        if budget.try_consume(section_fact_chars(&heading.fact)) {
+            facts.sections.push(heading.fact.clone());
+        }
+    }
 
     extract_links(
         doc,
@@ -341,7 +346,11 @@ pub fn render_structured_facts_for_extraction(
             };
             append_capped(&mut out, options.max_chars, label);
             append_capped(&mut out, options.max_chars, " → ");
-            append_capped(&mut out, options.max_chars, &link.href);
+            append_capped(
+                &mut out,
+                options.max_chars,
+                &redact_sensitive_query_values(&link.href),
+            );
             if let Some(email) = &link.email {
                 append_capped(&mut out, options.max_chars, " email=");
                 append_capped(&mut out, options.max_chars, email);
@@ -354,7 +363,12 @@ pub fn render_structured_facts_for_extraction(
                 append_capped(&mut out, options.max_chars, " ");
                 append_capped(&mut out, options.max_chars, &param.key);
                 append_capped(&mut out, options.max_chars, "=\"");
-                append_capped(&mut out, options.max_chars, &param.decoded_value);
+                let rendered_value = if is_sensitive_query_key(&param.key) {
+                    "[redacted]"
+                } else {
+                    &param.decoded_value
+                };
+                append_capped(&mut out, options.max_chars, rendered_value);
                 append_capped(&mut out, options.max_chars, "\"");
             }
             if let Some(heading) = &link.nearest_heading {
@@ -422,9 +436,11 @@ pub fn render_structured_facts_for_extraction(
         }
     }
 
-    let rendered_links = high_value_links.len().min(options.max_links);
-    let omitted_links = facts.links.len().saturating_sub(rendered_links);
-    if omitted_links > 0 {
+    let high_value_total = high_value_links.len();
+    let rendered_links = high_value_total.min(options.max_links);
+    let omitted_high_value = high_value_total.saturating_sub(rendered_links);
+    let omitted_low_value = facts.links.len().saturating_sub(high_value_total);
+    if omitted_high_value > 0 || omitted_low_value > 0 {
         let mut counts: BTreeMap<&'static str, usize> = BTreeMap::new();
         for link in &facts.links {
             for class in &link.classes {
@@ -441,8 +457,12 @@ pub fn render_structured_facts_for_extraction(
                 }
             }
         }
-        append_capped(&mut out, options.max_chars, "\nomitted low-value links: ");
-        append_capped(&mut out, options.max_chars, &omitted_links.to_string());
+        append_capped(&mut out, options.max_chars, "\nomitted links: ");
+        append_capped(
+            &mut out,
+            options.max_chars,
+            &format!("{omitted_low_value} low-value, {omitted_high_value} high-value due to cap"),
+        );
         if !counts.is_empty() {
             append_capped(&mut out, options.max_chars, " (");
             let parts: Vec<String> = counts
@@ -622,7 +642,10 @@ fn extract_media(
 ) {
     let mut seen = HashSet::new();
     for node in doc.select("video, audio").iter() {
-        if out.len() >= options.max_media || budget.exhausted() || is_hidden_context(&node) {
+        if out.len() >= options.max_media || budget.exhausted() {
+            break;
+        }
+        if is_hidden_context(&node) {
             continue;
         }
         let tag = tag_name(&node);
@@ -1085,7 +1108,10 @@ struct HeadingRef {
 fn collect_headings(doc: &Document, max_sections: usize, max_chars: usize) -> Vec<HeadingRef> {
     let mut out = Vec::new();
     for heading in doc.select("h1, h2, h3, h4, h5, h6").iter() {
-        if out.len() >= max_sections || is_hidden_context(&heading) {
+        if out.len() >= max_sections {
+            break;
+        }
+        if is_hidden_context(&heading) {
             continue;
         }
         let text = clean_field(&heading.text(), max_chars);
@@ -1362,6 +1388,55 @@ fn query_params(query: Option<&str>, max_chars: usize) -> Vec<QueryParamFact> {
     })
 }
 
+fn is_sensitive_query_key(key: &str) -> bool {
+    let normalized = key.to_ascii_lowercase();
+    matches!(
+        normalized.as_str(),
+        "access_token"
+            | "auth"
+            | "auth_token"
+            | "code"
+            | "id_token"
+            | "key"
+            | "password"
+            | "secret"
+            | "signature"
+            | "sig"
+            | "token"
+    ) || normalized.contains("secret")
+        || normalized.contains("token")
+        || normalized.contains("password")
+}
+
+fn redact_sensitive_query_values(href: &str) -> String {
+    let Some(query_start) = href.find('?') else {
+        return href.to_string();
+    };
+    let (prefix, query_and_fragment) = href.split_at(query_start + 1);
+    let (query, fragment) = query_and_fragment
+        .split_once('#')
+        .map_or((query_and_fragment, ""), |(q, f)| (q, f));
+    let redacted_query = query
+        .split('&')
+        .map(|part| {
+            let Some((key, _value)) = part.split_once('=') else {
+                return part.to_string();
+            };
+            if is_sensitive_query_key(&percent_decode(key)) {
+                format!("{key}=[redacted]")
+            } else {
+                part.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("&");
+    if fragment.is_empty() {
+        format!("{prefix}{redacted_query}")
+    } else {
+        format!("{prefix}{redacted_query}#{fragment}")
+    }
+}
+
 fn percent_decode(value: &str) -> String {
     let replaced = value.replace('+', " ");
     let bytes = replaced.as_bytes();
@@ -1387,7 +1462,7 @@ fn normalize_metadata_value(
     base_url: Option<&str>,
     max_chars: usize,
 ) -> String {
-    let cleaned = clean_field(value, max_chars);
+    let normalized = value.split_whitespace().collect::<Vec<_>>().join(" ");
     if path.ends_with("url")
         || path.ends_with("image")
         || path.ends_with("license")
@@ -1395,13 +1470,13 @@ fn normalize_metadata_value(
         || path == "canonical"
     {
         clean_field(
-            &normalize_url(&cleaned, base_url, &["http", "https"]).unwrap_or_default(),
+            &normalize_url(&normalized, base_url, &["http", "https"]).unwrap_or_default(),
             max_chars,
         )
     } else if path.ends_with("email") {
-        cleaned.trim_start_matches("mailto:").to_string()
+        clean_field(normalized.trim_start_matches("mailto:"), max_chars)
     } else {
-        cleaned
+        clean_field(&normalized, max_chars)
     }
 }
 
