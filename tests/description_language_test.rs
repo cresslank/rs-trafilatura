@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::extract;
 
 #[test]
@@ -13,7 +21,10 @@ fn description_from_meta_description() {
 
     let result = extract(html);
     match result {
-        Ok(result) => assert_eq!(result.metadata.description.as_deref(), Some("Meta description")),
+        Ok(result) => assert_eq!(
+            result.metadata.description.as_deref(),
+            Some("Meta description")
+        ),
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
 }
@@ -31,7 +42,10 @@ fn description_falls_back_to_og_description() {
 
     let result = extract(html);
     match result {
-        Ok(result) => assert_eq!(result.metadata.description.as_deref(), Some("OG description")),
+        Ok(result) => assert_eq!(
+            result.metadata.description.as_deref(),
+            Some("OG description")
+        ),
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
 }
@@ -49,7 +63,10 @@ fn description_falls_back_to_twitter_description() {
 
     let result = extract(html);
     match result {
-        Ok(result) => assert_eq!(result.metadata.description.as_deref(), Some("Twitter description")),
+        Ok(result) => assert_eq!(
+            result.metadata.description.as_deref(),
+            Some("Twitter description")
+        ),
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
 }

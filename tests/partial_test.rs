@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::{extract, extract_with_options, Options};
 
 /// Test AC#1: HTML where content extraction fails but metadata succeeds
@@ -23,7 +31,10 @@ fn metadata_only_when_content_fails() {
     let result = extract(html).expect("extraction should succeed with warnings");
 
     // Metadata is always extracted regardless of content
-    assert_eq!(result.metadata.title, Some("Test Article Title".to_string()));
+    assert_eq!(
+        result.metadata.title,
+        Some("Test Article Title".to_string())
+    );
     assert_eq!(result.metadata.author, Some("John Doe".to_string()));
     assert_eq!(
         result.metadata.description,

@@ -240,11 +240,7 @@ pub fn extract_filename(url: &str) -> String {
     let without_fragment = without_query.split('#').next().unwrap_or(without_query);
 
     // Get the last path segment
-    let filename = without_fragment
-        .split('/')
-        .last()
-        .unwrap_or("")
-        .trim();
+    let filename = without_fragment.split('/').next_back().unwrap_or("").trim();
 
     // Don't return empty-looking filenames
     if filename.is_empty() || filename == "." || filename == ".." {
@@ -316,10 +312,9 @@ mod tests {
     #[test]
     fn test_create_absolute_url_relative() {
         let base = Url::parse("https://example.com/articles/").ok();
-        let base = base.as_ref().map_or_else(
-            || panic!("Failed to parse base URL"),
-            |b| b,
-        );
+        let base = base
+            .as_ref()
+            .map_or_else(|| panic!("Failed to parse base URL"), |b| b);
 
         assert_eq!(
             create_absolute_url("page.html", base),
@@ -340,10 +335,9 @@ mod tests {
     #[test]
     fn test_create_absolute_url_already_absolute() {
         let base = Url::parse("https://example.com/").ok();
-        let base = base.as_ref().map_or_else(
-            || panic!("Failed to parse base URL"),
-            |b| b,
-        );
+        let base = base
+            .as_ref()
+            .map_or_else(|| panic!("Failed to parse base URL"), |b| b);
 
         assert_eq!(
             create_absolute_url("https://other.com/page", base),
@@ -354,10 +348,9 @@ mod tests {
     #[test]
     fn test_create_absolute_url_special() {
         let base = Url::parse("https://example.com/").ok();
-        let base = base.as_ref().map_or_else(
-            || panic!("Failed to parse base URL"),
-            |b| b,
-        );
+        let base = base
+            .as_ref()
+            .map_or_else(|| panic!("Failed to parse base URL"), |b| b);
 
         assert_eq!(
             create_absolute_url("data:image/png;base64,abc", base),
@@ -383,10 +376,9 @@ mod tests {
     #[test]
     fn test_create_absolute_url_empty() {
         let base = Url::parse("https://example.com/").ok();
-        let base = base.as_ref().map_or_else(
-            || panic!("Failed to parse base URL"),
-            |b| b,
-        );
+        let base = base
+            .as_ref()
+            .map_or_else(|| panic!("Failed to parse base URL"), |b| b);
 
         assert_eq!(create_absolute_url("", base), "");
         assert_eq!(create_absolute_url("  ", base), "");
@@ -395,7 +387,10 @@ mod tests {
     #[test]
     fn test_get_domain_url() {
         assert_eq!(get_domain_url("https://example.com/path"), "example.com");
-        assert_eq!(get_domain_url("https://sub.example.com/"), "sub.example.com");
+        assert_eq!(
+            get_domain_url("https://sub.example.com/"),
+            "sub.example.com"
+        );
         assert_eq!(get_domain_url("/relative"), "");
         assert_eq!(get_domain_url(""), "");
     }
@@ -474,7 +469,7 @@ mod tests {
         );
         assert_eq!(
             normalize_url("https://example.com/"),
-            "https://example.com/"  // Root path preserved
+            "https://example.com/" // Root path preserved
         );
     }
 
@@ -515,10 +510,7 @@ mod tests {
             extract_filename("https://example.com/path/to/file.png"),
             "file.png"
         );
-        assert_eq!(
-            extract_filename("/relative/path/image.gif"),
-            "image.gif"
-        );
+        assert_eq!(extract_filename("/relative/path/image.gif"), "image.gif");
     }
 
     #[test]
@@ -531,10 +523,7 @@ mod tests {
             extract_filename("https://cdn.example.com/photo.webp?width=800&height=600"),
             "photo.webp"
         );
-        assert_eq!(
-            extract_filename("/image.png?timestamp=12345"),
-            "image.png"
-        );
+        assert_eq!(extract_filename("/image.png?timestamp=12345"), "image.png");
     }
 
     #[test]
@@ -543,10 +532,7 @@ mod tests {
             extract_filename("https://example.com/image.jpg#section"),
             "image.jpg"
         );
-        assert_eq!(
-            extract_filename("/path/file.svg#icon"),
-            "file.svg"
-        );
+        assert_eq!(extract_filename("/path/file.svg#icon"), "file.svg");
     }
 
     #[test]
@@ -617,7 +603,10 @@ mod tests {
     #[test]
     fn test_filenames_match_empty() {
         assert!(!filenames_match("", "https://example.com/image.jpg"));
-        assert!(!filenames_match("https://example.com/", "https://example.com/"));
+        assert!(!filenames_match(
+            "https://example.com/",
+            "https://example.com/"
+        ));
         assert!(!filenames_match("", ""));
     }
 }

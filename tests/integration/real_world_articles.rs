@@ -17,13 +17,16 @@ fn fixture_path(name: &str) -> String {
 
 #[test]
 fn test_extract_full_article_with_metadata() {
-    let html = std::fs::read_to_string(fixture_path("article_full.html"))
-        .expect("Failed to read fixture");
+    let html =
+        std::fs::read_to_string(fixture_path("article_full.html")).expect("Failed to read fixture");
 
     match extract(&html) {
         Ok(result) => {
             // Verify content extraction
-            assert!(!result.content_text.is_empty(), "Content should not be empty");
+            assert!(
+                !result.content_text.is_empty(),
+                "Content should not be empty"
+            );
             assert!(
                 result.content_text.len() > 500,
                 "Content should be substantial"
@@ -75,7 +78,10 @@ fn test_extract_blog_with_comments_enabled() {
     match extract_with_options(&html, &opts) {
         Ok(result) => {
             // Verify main content extracted
-            assert!(!result.content_text.is_empty(), "Content should not be empty");
+            assert!(
+                !result.content_text.is_empty(),
+                "Content should not be empty"
+            );
             assert!(
                 result.content_text.contains("Rust"),
                 "Should contain main blog content about Rust"
@@ -84,10 +90,7 @@ fn test_extract_blog_with_comments_enabled() {
             // Verify metadata
             assert!(result.metadata.title.is_some(), "Title should be extracted");
             if let Some(ref title) = result.metadata.title {
-                assert!(
-                    title.contains("Rust"),
-                    "Title should mention Rust"
-                );
+                assert!(title.contains("Rust"), "Title should mention Rust");
             }
         }
         Err(err) => panic!("Extraction failed: {err:?}"),
@@ -107,7 +110,10 @@ fn test_extract_blog_without_comments() {
     match extract_with_options(&html, &opts) {
         Ok(result) => {
             // Verify main content extracted
-            assert!(!result.content_text.is_empty(), "Content should not be empty");
+            assert!(
+                !result.content_text.is_empty(),
+                "Content should not be empty"
+            );
 
             // Comments should not be in result
             assert!(
@@ -198,8 +204,8 @@ fn test_extract_article_removes_boilerplate() {
 
 #[test]
 fn test_article_metadata_completeness() {
-    let html = std::fs::read_to_string(fixture_path("article_full.html"))
-        .expect("Failed to read fixture");
+    let html =
+        std::fs::read_to_string(fixture_path("article_full.html")).expect("Failed to read fixture");
 
     match extract(&html) {
         Ok(result) => {
@@ -220,10 +226,7 @@ fn test_article_metadata_completeness() {
             }
 
             if let Some(ref author) = meta.author {
-                assert!(
-                    author.contains("Jane Smith"),
-                    "Author should be Jane Smith"
-                );
+                assert!(author.contains("Jane Smith"), "Author should be Jane Smith");
             }
         }
         Err(err) => panic!("Extraction failed: {err:?}"),

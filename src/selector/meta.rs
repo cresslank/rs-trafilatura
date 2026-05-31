@@ -77,10 +77,7 @@ pub fn meta_author_rule_2(sel: &Selection) -> bool {
     let item_prop = attr(sel, "itemprop");
 
     // Tag filter
-    if !matches!(
-        tag_val.as_str(),
-        "a" | "div" | "h3" | "h4" | "p" | "span"
-    ) {
+    if !matches!(tag_val.as_str(), "a" | "div" | "h3" | "h4" | "p" | "span") {
         return false;
     }
 
@@ -295,7 +292,9 @@ pub fn meta_tags_rule_1(sel: &Selection) -> bool {
     }
 
     // Pattern matching
-    contains(&id_class, "tags") || contains(&class_val, "tag-list") || contains(&id_class, "keywords")
+    contains(&id_class, "tags")
+        || contains(&class_val, "tag-list")
+        || contains(&id_class, "keywords")
 }
 
 /// Rule 2: Link-based tags

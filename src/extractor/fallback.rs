@@ -3,14 +3,14 @@
 //! This module ports fallback extraction from go-trafilatura's baseline.go and external.go.
 //! It provides baseline extraction (JSON-LD, paragraph scraping) and comparison-based fallback.
 
-use dom_query::{Document, Selection};
-use serde_json::Value;
+use super::pruning::prune_unwanted_nodes;
+use super::tags::VALID_TAG_CATALOG;
 use crate::dom;
 use crate::etree;
 use crate::selector::discard::should_discard;
 use crate::Options;
-use super::pruning::prune_unwanted_nodes;
-use super::tags::VALID_TAG_CATALOG;
+use dom_query::{Document, Selection};
+use serde_json::Value;
 
 // === Baseline Extraction ===
 
@@ -69,7 +69,9 @@ pub fn extract_discourse_content(doc: &Document) -> Option<String> {
     let outer: Value = serde_json::from_str(&decoded).ok()?;
 
     // Look for topic data (usually in a key like "topic_NNNNNN")
-    let topic_data = outer.as_object()?.iter()
+    let topic_data = outer
+        .as_object()?
+        .iter()
         .find(|(k, _)| k.starts_with("topic_"))
         .map(|(_, v)| v)?;
 
@@ -169,7 +171,11 @@ pub fn extract_json_ld_article_body(doc: &Document) -> Option<String> {
                 // If contains HTML, extract text
                 if body.contains("<p>") {
                     let temp_doc = Document::from(format!("<div>{body}</div>"));
-                    return Some(dom::text_content(&temp_doc.select("div")).trim().to_string());
+                    return Some(
+                        dom::text_content(&temp_doc.select("div"))
+                            .trim()
+                            .to_string(),
+                    );
                 }
                 return Some(body);
             }
@@ -211,10 +217,11 @@ pub fn extract_json_ld_product_description(doc: &Document) -> Option<String> {
 fn find_product_description(value: &Value, best: &mut Option<String>, best_len: &mut usize) {
     match value {
         Value::Object(map) => {
-            let is_product = map.get("@type").map_or(false, |t| match t {
+            let is_product = map.get("@type").is_some_and(|t| match t {
                 Value::String(s) => s == "Product" || s == "SoftwareApplication",
                 Value::Array(arr) => arr.iter().any(|v| {
-                    v.as_str().map_or(false, |s| s == "Product" || s == "SoftwareApplication")
+                    v.as_str()
+                        .is_some_and(|s| s == "Product" || s == "SoftwareApplication")
                 }),
                 _ => false,
             });
@@ -227,7 +234,11 @@ fn find_product_description(value: &Value, best: &mut Option<String>, best_len: 
                         // Strip HTML if present
                         if desc.contains('<') {
                             let temp_doc = Document::from(format!("<div>{desc}</div>"));
-                            *best = Some(dom::text_content(&temp_doc.select("div")).trim().to_string());
+                            *best = Some(
+                                dom::text_content(&temp_doc.select("div"))
+                                    .trim()
+                                    .to_string(),
+                            );
                         } else {
                             *best = Some(desc.to_string());
                         }
@@ -298,7 +309,9 @@ pub fn baseline(doc: &Document) -> (Document, String) {
     for node in etree::iter(
         &doc.select("body"),
         &["blockquote", "pre", "q", "code", "p"],
-    ).nodes() {
+    )
+    .nodes()
+    {
         let elem = Selection::from(*node);
 
         // Skip elements that match discard rules (e.g., MenuItem, navigation)
@@ -370,10 +383,9 @@ pub fn baseline(doc: &Document) -> (Document, String) {
 // === Fallback Comparison ===
 
 static TAGS_TO_SANITIZE: &[&str] = &[
-    "aside", "audio", "button", "fieldset", "figure", "footer", "iframe",
-    "input", "label", "link", "nav", "noindex", "noscript",
-    "object", "option", "select", "source", "svg", "time",
-    "script", "style",
+    "aside", "audio", "button", "fieldset", "figure", "footer", "iframe", "input", "label", "link",
+    "nav", "noindex", "noscript", "object", "option", "select", "source", "svg", "time", "script",
+    "style",
 ];
 
 /// CSS selector for common social share plugin elements to remove from fallback output.
@@ -426,12 +438,20 @@ pub fn candidate_is_usable(
             .select("p")
             .nodes()
             .iter()
-            .map(|n| etree::iter_text(&Selection::from(*n), " ").trim().chars().count())
+            .map(|n| {
+                etree::iter_text(&Selection::from(*n), " ")
+                    .trim()
+                    .chars()
+                    .count()
+            })
             .sum();
 
         // Fix 6: Tighter paragraph density check (raised from 30% to 40%)
         // If less than 40% of our extracted text is in paragraphs, we likely grabbed boilerplate
-        if len_extracted > 0 && p_text_length * 100 / len_extracted < 40 && len_candidate >= min_size {
+        if len_extracted > 0
+            && p_text_length * 100 / len_extracted < 40
+            && len_candidate >= min_size
+        {
             return true;
         }
 
@@ -459,7 +479,12 @@ pub fn candidate_is_usable(
         .select("p")
         .nodes()
         .iter()
-        .map(|n| etree::iter_text(&Selection::from(*n), " ").trim().chars().count())
+        .map(|n| {
+            etree::iter_text(&Selection::from(*n), " ")
+                .trim()
+                .chars()
+                .count()
+        })
         .sum();
 
     if p_text_length == 0 && len_candidate > min_size * 2 {
@@ -490,7 +515,9 @@ fn sanitize_tree(tree: &Selection, opts: &Options) {
     let sub_elements = tree.select("*").nodes().to_vec();
     for node in sub_elements.into_iter().rev() {
         let elem = Selection::from(node);
-        let tag = dom::tag_name(&elem).unwrap_or_default().to_ascii_lowercase();
+        let tag = dom::tag_name(&elem)
+            .unwrap_or_default()
+            .to_ascii_lowercase();
         if TAGS_TO_SANITIZE.contains(&tag.as_str()) {
             etree::remove(&elem, false);
         }
@@ -529,7 +556,10 @@ fn sanitize_tree(tree: &Selection, opts: &Options) {
     }
 
     if !tags_to_strip.is_empty() {
-        let tags_refs: Vec<&str> = tags_to_strip.iter().map(std::string::String::as_str).collect();
+        let tags_refs: Vec<&str> = tags_to_strip
+            .iter()
+            .map(std::string::String::as_str)
+            .collect();
         etree::strip_tags(tree, &tags_refs);
     }
 }
@@ -593,7 +623,9 @@ pub fn compare_external_extraction(
 
     // Final sanitization
     sanitize_tree(&result_doc.select("body"), opts);
-    let final_text = etree::iter_text(&result_doc.select("body"), " ").trim().to_string();
+    let final_text = etree::iter_text(&result_doc.select("body"), " ")
+        .trim()
+        .to_string();
     (result_doc, final_text)
 }
 
@@ -778,8 +810,8 @@ mod tests {
         let result = candidate_is_usable(
             &doc2.select("div"),
             &doc1.select("div"),
-            100,  // candidate length
-            0,    // extracted length
+            100, // candidate length
+            0,   // extracted length
             &opts,
         );
 
@@ -795,8 +827,8 @@ mod tests {
         let result = candidate_is_usable(
             &doc2.select("div"),
             &doc1.select("div"),
-            500,   // candidate length
-            100,   // extracted length
+            500, // candidate length
+            100, // extracted length
             &opts,
         );
 
@@ -822,7 +854,10 @@ mod tests {
     fn test_sanitize_tree_strips_links_when_disabled() {
         let doc = dom::parse(r##"<div><p>Text with <a href="#">link</a></p></div>"##);
         let root = doc.select("div");
-        let opts = Options { include_links: false, ..Options::default() };
+        let opts = Options {
+            include_links: false,
+            ..Options::default()
+        };
 
         sanitize_tree(&root, &opts);
 
@@ -834,7 +869,7 @@ mod tests {
 mod share_plugin_tests {
     use super::*;
     use crate::dom;
-    
+
     #[test]
     fn test_share_plugin_selector_matches() {
         let html = r#"
@@ -844,10 +879,14 @@ mod share_plugin_tests {
         <p>Real content here</p>
         </body></html>
         "#;
-        
+
         let doc = dom::parse(html);
         let matches = doc.select(SHARE_PLUGIN_SELECTOR);
-        
-        assert!(matches.length() >= 2, "Expected at least 2 matches, got {}", matches.length());
+
+        assert!(
+            matches.length() >= 2,
+            "Expected at least 2 matches, got {}",
+            matches.length()
+        );
     }
 }

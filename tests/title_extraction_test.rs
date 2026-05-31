@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::extract;
 
 #[test]
@@ -123,7 +131,10 @@ fn title_cleaning_preserves_colons_in_content() {
         Ok(result) => {
             let title = result.metadata.title.as_deref().unwrap_or("");
             // Title should contain "Article Title" after cleaning
-            assert!(title.contains("Article Title"), "expected title to contain 'Article Title', got: {title:?}");
+            assert!(
+                title.contains("Article Title"),
+                "expected title to contain 'Article Title', got: {title:?}"
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
@@ -170,7 +181,10 @@ fn title_cleaning_removes_trailing_site_suffix_only() {
         Ok(result) => {
             let title = result.metadata.title.as_deref().unwrap_or("");
             // Should select the longest meaningful segment
-            assert!(title.contains("The Actual Article Title Here"), "expected title to contain article text, got: {title:?}");
+            assert!(
+                title.contains("The Actual Article Title Here"),
+                "expected title to contain article text, got: {title:?}"
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }

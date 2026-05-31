@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::extract;
 
 const PADDING: &str = "<p>Additional paragraph with enough content to ensure the extraction algorithm finds sufficient text density to extract this article content properly.</p><p>Second padding paragraph adding more sentences to satisfy the minimum scoring threshold required for content extraction to succeed.</p>";
@@ -5,7 +13,8 @@ const PADDING: &str = "<p>Additional paragraph with enough content to ensure the
 #[test]
 fn extract_preserves_paragraph_separation() {
     // Both paragraphs are extracted; current behavior joins with a space (not \n\n)
-    let html = format!("<article><p>First paragraph.</p><p>Second paragraph.</p>{PADDING}</article>");
+    let html =
+        format!("<article><p>First paragraph.</p><p>Second paragraph.</p>{PADDING}</article>");
     let result = extract(&html);
     match result {
         Ok(result) => {
@@ -123,7 +132,9 @@ fn extract_handles_nested_inline_elements() {
 #[test]
 fn extract_handles_list_items() {
     // List items are extracted; current behavior may not add newlines between them
-    let html = format!("<article><ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>{PADDING}</article>");
+    let html = format!(
+        "<article><ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>{PADDING}</article>"
+    );
     let result = extract(&html);
     match result {
         Ok(result) => {

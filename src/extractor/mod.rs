@@ -49,8 +49,3 @@ pub mod pipeline;
 pub mod pruning;
 pub mod state;
 pub mod tags;
-
-pub use comments::extract_comments;
-pub use fallback::{baseline, candidate_is_usable, compare_external_extraction, extract_with_fallback};
-pub use pipeline::extract_content;
-pub use state::ExtractionState;

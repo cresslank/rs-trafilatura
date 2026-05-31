@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::{extract_bytes, extract_bytes_with_options, Options};
 
 /// Test AC#1: UTF-8 content is handled correctly
@@ -14,7 +22,8 @@ fn utf8_content_handled_correctly() {
             </article>\
         </body>\
         </html>\
-    ".as_bytes();
+    "
+    .as_bytes();
 
     let result = extract_bytes(html).expect("extraction failed");
 

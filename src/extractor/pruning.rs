@@ -265,8 +265,7 @@ mod tests {
 
         // Create a rule that matches .sidebar
         fn sidebar_rule(sel: &Selection) -> bool {
-            dom::get_attribute(sel, "class")
-                .is_some_and(|c| c.contains("sidebar"))
+            dom::get_attribute(sel, "class").is_some_and(|c| c.contains("sidebar"))
         }
 
         let pruned_doc = prune_unwanted_nodes(&root, &[sidebar_rule], false);
@@ -287,8 +286,7 @@ mod tests {
 
         fn remove_span(sel: &Selection) -> bool {
             dom::tag_name(sel).as_deref() == Some("span")
-                && dom::get_attribute(sel, "class")
-                    .is_some_and(|c| c.contains("remove"))
+                && dom::get_attribute(sel, "class").is_some_and(|c| c.contains("remove"))
         }
 
         let pruned_doc = prune_unwanted_nodes(&root, &[remove_span], false);
@@ -313,8 +311,7 @@ mod tests {
 
         // Rule that matches .main (which contains most of the text)
         fn main_rule(sel: &Selection) -> bool {
-            dom::get_attribute(sel, "class")
-                .is_some_and(|c| c.contains("main"))
+            dom::get_attribute(sel, "class").is_some_and(|c| c.contains("main"))
         }
 
         // With backup=true, should restore if too much removed
@@ -366,12 +363,18 @@ mod tests {
         let pruned = pruned_doc.select("body > *");
 
         // Content paragraphs should remain
-        assert!(pruned.select("p").length() >= 1, "Content paragraphs should remain");
+        assert!(
+            pruned.select("p").length() >= 1,
+            "Content paragraphs should remain"
+        );
 
         // Trailing h2 should be removed in precision mode
         // (it's at the end of the content, so it gets removed)
         let h2_count = pruned.select("h2").length();
-        assert_eq!(h2_count, 0, "Trailing h2 should be removed in precision mode");
+        assert_eq!(
+            h2_count, 0,
+            "Trailing h2 should be removed in precision mode"
+        );
     }
 
     #[test]

@@ -8,11 +8,11 @@
 use dom_query::Selection;
 
 // Future story modules (placeholders)
-pub mod content;    // Story 2.2: Content selector rules
-pub mod discard;    // Story 2.3: Overall discard patterns
-pub mod precision;  // Story 2.4: Precision/teaser/image discard
-pub mod comments;   // Story 2.5: Comment selectors
-pub mod meta;       // Story 2.6: Metadata selectors
+pub mod comments; // Story 2.5: Comment selectors
+pub mod content; // Story 2.2: Content selector rules
+pub mod discard; // Story 2.3: Overall discard patterns
+pub mod meta;
+pub mod precision; // Story 2.4: Precision/teaser/image discard // Story 2.6: Metadata selectors
 
 pub mod utils;
 
@@ -104,12 +104,14 @@ mod tests {
 
     #[test]
     fn test_query_finds_first_match() {
-        let doc = dom::parse(r#"
+        let doc = dom::parse(
+            r#"
             <div>
                 <p class="target">First</p>
                 <p class="target">Second</p>
             </div>
-        "#);
+        "#,
+        );
         let root = doc.select("div");
 
         fn is_target(sel: &Selection) -> bool {
@@ -123,13 +125,15 @@ mod tests {
 
     #[test]
     fn test_query_all_finds_all_matches() {
-        let doc = dom::parse(r#"
+        let doc = dom::parse(
+            r#"
             <div>
                 <p class="target">First</p>
                 <span>Not target</span>
                 <p class="target">Second</p>
             </div>
-        "#);
+        "#,
+        );
         let root = doc.select("div");
 
         fn is_target(sel: &Selection) -> bool {
@@ -167,14 +171,16 @@ mod tests {
 
     #[test]
     fn test_query_document_order() {
-        let doc = dom::parse(r#"
+        let doc = dom::parse(
+            r#"
             <div>
                 <section>
                     <p class="match">Deep first</p>
                 </section>
                 <p class="match">Shallow second</p>
             </div>
-        "#);
+        "#,
+        );
         let root = doc.select("div");
 
         fn is_match(sel: &Selection) -> bool {
@@ -190,7 +196,8 @@ mod tests {
 
     #[test]
     fn test_query_all_preserves_document_order() {
-        let doc = dom::parse(r#"
+        let doc = dom::parse(
+            r#"
             <div>
                 <p class="item">1</p>
                 <section>
@@ -198,7 +205,8 @@ mod tests {
                 </section>
                 <p class="item">3</p>
             </div>
-        "#);
+        "#,
+        );
         let root = doc.select("div");
 
         fn is_item(sel: &Selection) -> bool {
@@ -216,13 +224,15 @@ mod tests {
 
     #[test]
     fn test_rule_can_check_multiple_conditions() {
-        let doc = dom::parse(r#"
+        let doc = dom::parse(
+            r#"
             <div>
                 <article id="main" class="content">Match</article>
                 <article class="content">No ID</article>
                 <article id="sidebar">No class</article>
             </div>
-        "#);
+        "#,
+        );
         let root = doc.select("div");
 
         fn has_both_id_and_class(sel: &Selection) -> bool {
@@ -238,13 +248,15 @@ mod tests {
 
     #[test]
     fn test_query_with_tag_filter() {
-        let doc = dom::parse(r#"
+        let doc = dom::parse(
+            r#"
             <div>
                 <p>paragraph</p>
                 <article>article element</article>
                 <section>section element</section>
             </div>
-        "#);
+        "#,
+        );
         let root = doc.select("div");
 
         fn is_article_or_section(sel: &Selection) -> bool {

@@ -17,8 +17,8 @@ fn fixture_path(name: &str) -> String {
 
 #[test]
 fn test_precision_mode_with_metadata() {
-    let html = std::fs::read_to_string(fixture_path("article_full.html"))
-        .expect("Failed to read fixture");
+    let html =
+        std::fs::read_to_string(fixture_path("article_full.html")).expect("Failed to read fixture");
 
     let opts = Options {
         favor_precision: true,
@@ -28,11 +28,17 @@ fn test_precision_mode_with_metadata() {
     match extract_with_options(&html, &opts) {
         Ok(result) => {
             // Precision mode should still extract main content
-            assert!(!result.content_text.is_empty(), "Content should be extracted");
+            assert!(
+                !result.content_text.is_empty(),
+                "Content should be extracted"
+            );
 
             // Metadata should still be complete
             assert!(result.metadata.title.is_some(), "Title should be extracted");
-            assert!(result.metadata.author.is_some(), "Author should be extracted");
+            assert!(
+                result.metadata.author.is_some(),
+                "Author should be extracted"
+            );
 
             // Content should be cleaner (less boilerplate)
             assert!(
@@ -46,12 +52,12 @@ fn test_precision_mode_with_metadata() {
 
 #[test]
 fn test_recall_mode_extracts_more_content() {
-    let html = std::fs::read_to_string(fixture_path("article_full.html"))
-        .expect("Failed to read fixture");
+    let html =
+        std::fs::read_to_string(fixture_path("article_full.html")).expect("Failed to read fixture");
 
     // First extract with default settings (for reference, not used in assertions)
-    let _default_result = extract_with_options(&html, &Options::default())
-        .expect("Default extraction failed");
+    let _default_result =
+        extract_with_options(&html, &Options::default()).expect("Default extraction failed");
 
     // Then with recall mode
     let recall_opts = Options {
@@ -69,7 +75,10 @@ fn test_recall_mode_extracts_more_content() {
             );
 
             // Metadata should still work
-            assert!(recall_result.metadata.title.is_some(), "Title should be extracted");
+            assert!(
+                recall_result.metadata.title.is_some(),
+                "Title should be extracted"
+            );
         }
         Err(err) => panic!("Extraction failed: {err:?}"),
     }
@@ -77,12 +86,12 @@ fn test_recall_mode_extracts_more_content() {
 
 #[test]
 fn test_author_blacklist_filtering() {
-    let html = std::fs::read_to_string(fixture_path("article_full.html"))
-        .expect("Failed to read fixture");
+    let html =
+        std::fs::read_to_string(fixture_path("article_full.html")).expect("Failed to read fixture");
 
     // First extract without blacklist to confirm author exists
-    let default_result = extract_with_options(&html, &Options::default())
-        .expect("Default extraction failed");
+    let default_result =
+        extract_with_options(&html, &Options::default()).expect("Default extraction failed");
 
     assert!(
         default_result.metadata.author.is_some(),
@@ -106,7 +115,10 @@ fn test_author_blacklist_filtering() {
             }
 
             // Content should still be extracted
-            assert!(!result.content_text.is_empty(), "Content should be extracted");
+            assert!(
+                !result.content_text.is_empty(),
+                "Content should be extracted"
+            );
         }
         Err(err) => panic!("Extraction failed: {err:?}"),
     }
@@ -140,9 +152,7 @@ fn test_deduplication_removes_repeated_text() {
             // which operates at paragraph level during extraction.
             // For now, verify the option doesn't break extraction.
             let occurrences = result.content_text.matches("Lorem ipsum").count();
-            eprintln!(
-                "Deduplication test: found {occurrences} occurrences of 'Lorem ipsum'"
-            );
+            eprintln!("Deduplication test: found {occurrences} occurrences of 'Lorem ipsum'");
         }
         Err(err) => panic!("Extraction failed: {err:?}"),
     }
@@ -179,8 +189,8 @@ fn test_tables_and_precision_combined() {
 
 #[test]
 fn test_content_length_limits() {
-    let html = std::fs::read_to_string(fixture_path("article_full.html"))
-        .expect("Failed to read fixture");
+    let html =
+        std::fs::read_to_string(fixture_path("article_full.html")).expect("Failed to read fixture");
 
     let opts = Options {
         max_extracted_len: 500,
@@ -228,8 +238,8 @@ fn test_min_output_size_validation() {
 
 #[test]
 fn test_multiple_options_combined() {
-    let html = std::fs::read_to_string(fixture_path("article_full.html"))
-        .expect("Failed to read fixture");
+    let html =
+        std::fs::read_to_string(fixture_path("article_full.html")).expect("Failed to read fixture");
 
     let opts = Options {
         include_tables: true,
@@ -243,7 +253,10 @@ fn test_multiple_options_combined() {
     match extract_with_options(&html, &opts) {
         Ok(result) => {
             // Basic extraction should work
-            assert!(!result.content_text.is_empty(), "Content should be extracted");
+            assert!(
+                !result.content_text.is_empty(),
+                "Content should be extracted"
+            );
 
             // Metadata should be complete
             assert!(result.metadata.title.is_some(), "Title should be extracted");

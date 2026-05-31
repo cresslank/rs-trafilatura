@@ -2,17 +2,18 @@
 //!
 //! This module ports the simpler element handlers from go-trafilatura's main-extractor.go.
 
-use dom_query::{Selection, Document};
-use crate::dom;
-use crate::etree;
-use crate::html_processing::{handle_text_node, is_share_button_text, process_node, text_chars_test};
-use crate::Options;
 use super::state::ExtractionState;
 use super::tags::{
-    is_xml_cell_tag, is_xml_graphic_tag, is_xml_head_tag, is_xml_hi_tag,
-    is_xml_item_tag, is_xml_list_tag, is_xml_quote_tag,
-    XML_ITEM_TAGS, XML_QUOTE_TAGS,
+    is_xml_cell_tag, is_xml_graphic_tag, is_xml_head_tag, is_xml_hi_tag, is_xml_item_tag,
+    is_xml_list_tag, is_xml_quote_tag, XML_ITEM_TAGS, XML_QUOTE_TAGS,
 };
+use crate::dom;
+use crate::etree;
+use crate::html_processing::{
+    handle_text_node, is_share_button_text, process_node, text_chars_test,
+};
+use crate::Options;
+use dom_query::{Document, Selection};
 
 /// Check if element contains text content.
 ///
@@ -151,10 +152,7 @@ pub fn handle_titles(
 ///
 /// Go equivalent: `handleFormatting(element, cache, opts)` (lines 60-89)
 #[must_use]
-pub fn handle_formatting(
-    element: &Selection,
-    opts: &Options,
-) -> Option<Document> {
+pub fn handle_formatting(element: &Selection, opts: &Options) -> Option<Document> {
     let formatting = if process_node(element, None, opts) {
         Some(dom::clone_element(element, true))
     } else {
@@ -752,13 +750,12 @@ pub fn handle_table(
         let sub_tag = dom::tag_name(&sub_element).unwrap_or_default();
 
         match sub_tag.as_str() {
-            "tr" => {
+            "tr"
                 // Save current row if it has cells, start new row
-                if !current_row_cells.is_empty() {
+                if !current_row_cells.is_empty() => {
                     rows.push(format!("<tr>{}</tr>", current_row_cells.join("")));
                     current_row_cells.clear();
                 }
-            }
             "td" | "th" => {
                 let children = dom::children(&sub_element);
                 if children.is_empty() {
@@ -965,10 +962,7 @@ mod tests {
         assert!(processed.is_some());
         let p_doc = processed.unwrap();
         let p = p_doc.select("img");
-        assert_eq!(
-            dom::get_attribute(&p, "src"),
-            Some("lazy.png".to_string())
-        );
+        assert_eq!(dom::get_attribute(&p, "src"), Some("lazy.png".to_string()));
     }
 
     #[test]
@@ -980,10 +974,7 @@ mod tests {
         assert!(processed.is_some());
         let p_doc = processed.unwrap();
         let p = p_doc.select("img");
-        assert_eq!(
-            dom::get_attribute(&p, "src"),
-            Some("lazy2.jpg".to_string())
-        );
+        assert_eq!(dom::get_attribute(&p, "src"), Some("lazy2.jpg".to_string()));
     }
 
     #[test]
@@ -1028,7 +1019,10 @@ mod tests {
         assert!(processed.is_some());
         let p_doc = processed.unwrap();
         let p = p_doc.select("img");
-        assert_eq!(dom::get_attribute(&p, "title"), Some("Image Title".to_string()));
+        assert_eq!(
+            dom::get_attribute(&p, "title"),
+            Some("Image Title".to_string())
+        );
     }
 
     #[test]
@@ -1220,7 +1214,10 @@ mod tests {
         let p = doc.select("p");
         let mut state = ExtractionState::new();
         state.add_potential_tag("a");
-        let opts = Options { include_links: true, ..Options::default() };
+        let opts = Options {
+            include_links: true,
+            ..Options::default()
+        };
 
         let processed = handle_paragraphs(&p, &mut state, &opts);
         assert!(processed.is_some());
@@ -1318,7 +1315,8 @@ mod tests {
 
     #[test]
     fn test_handle_table_cell_with_formatting() {
-        let doc = dom::parse("<table><tr><td><b>Bold</b> and <em>italic</em> text</td></tr></table>");
+        let doc =
+            dom::parse("<table><tr><td><b>Bold</b> and <em>italic</em> text</td></tr></table>");
         let table = doc.select("table");
         let mut state = ExtractionState::new();
         state.add_potential_tag("table");
@@ -1336,7 +1334,8 @@ mod tests {
 
     #[test]
     fn test_handle_table_cell_with_list_recall_mode() {
-        let doc = dom::parse("<table><tr><td><ul><li>Item 1</li><li>Item 2</li></ul></td></tr></table>");
+        let doc =
+            dom::parse("<table><tr><td><ul><li>Item 1</li><li>Item 2</li></ul></td></tr></table>");
         let table = doc.select("table");
         let mut state = ExtractionState::new();
         state.add_potential_tag("table");

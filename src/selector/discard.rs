@@ -282,9 +282,7 @@ pub fn overall_discarded_content_rule_3(sel: &Selection) -> bool {
 /// Precision discarded content rules
 ///
 /// Toggled by `options.favor_precision`. Removes more potential noise.
-pub static PRECISION_DISCARDED_CONTENT: &[Rule] = &[
-    precision_discard_rule_1,
-];
+pub static PRECISION_DISCARDED_CONTENT: &[Rule] = &[precision_discard_rule_1];
 
 /// Rule 1: Precision discard patterns
 ///
@@ -306,9 +304,7 @@ pub fn precision_discard_rule_1(sel: &Selection) -> bool {
 /// Teaser content rules
 ///
 /// Identifies "teaser" elements that are just summaries/links to other content.
-pub static TEASER_DISCARDED_CONTENT: &[Rule] = &[
-    teaser_rule_1,
-];
+pub static TEASER_DISCARDED_CONTENT: &[Rule] = &[teaser_rule_1];
 
 /// Rule 1: Teaser patterns
 ///
@@ -681,4 +677,3 @@ mod tests {
         assert_eq!(discardable.len(), 0);
     }
 }
-

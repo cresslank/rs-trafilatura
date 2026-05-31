@@ -39,10 +39,7 @@ pub fn comments_rule_1(sel: &Selection) -> bool {
     let id_class = format!("{id_val}{class_val}");
 
     // Tag filter
-    if !matches!(
-        tag_val.as_str(),
-        "div" | "ol" | "ul" | "dl" | "section"
-    ) {
+    if !matches!(tag_val.as_str(), "div" | "ol" | "ul" | "dl" | "section") {
         return false;
     }
 
@@ -68,10 +65,7 @@ pub fn comments_rule_2(sel: &Selection) -> bool {
     let id_class = format!("{id_val}{class_val}");
 
     // Tag filter
-    if !matches!(
-        tag_val.as_str(),
-        "div" | "section" | "ol" | "ul" | "dl"
-    ) {
+    if !matches!(tag_val.as_str(), "div" | "section" | "ol" | "ul" | "dl") {
         return false;
     }
 
@@ -94,10 +88,7 @@ pub fn comments_rule_3(sel: &Selection) -> bool {
     let id_val = id(sel);
 
     // Tag filter
-    if !matches!(
-        tag_val.as_str(),
-        "div" | "section" | "ol" | "ul" | "dl"
-    ) {
+    if !matches!(tag_val.as_str(), "div" | "section" | "ol" | "ul" | "dl") {
         return false;
     }
 
@@ -219,10 +210,7 @@ pub fn removed_comments_rule_1(sel: &Selection) -> bool {
     let class_val = class(sel);
 
     // Tag filter
-    if !matches!(
-        tag_val.as_str(),
-        "div" | "ol" | "ul" | "dl" | "section"
-    ) {
+    if !matches!(tag_val.as_str(), "div" | "ol" | "ul" | "dl" | "section") {
         return false;
     }
 

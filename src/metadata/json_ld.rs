@@ -3,11 +3,11 @@
 //! This module ports JSON-LD metadata parsing from go-trafilatura's metadata-json.go.
 //! It extracts structured metadata from Schema.org JSON-LD embedded in HTML documents.
 
-use dom_query::{Document, Selection};
-use serde_json::Value;
 use crate::dom;
 use crate::result::Metadata;
 use crate::Options;
+use dom_query::{Document, Selection};
+use serde_json::Value;
 
 /// Schema data container with importance scoring.
 ///
@@ -108,9 +108,7 @@ pub fn extract_json_ld(doc: &Document, original: Metadata, _opts: &Options) -> M
 /// Parse and categorize JSON-LD scripts into persons, organizations, and articles.
 ///
 /// Go equivalent: `decodeJsonLd(doc, opts)` (lines 93-189)
-fn decode_json_ld(
-    doc: &Document,
-) -> (Vec<SchemaData>, Vec<SchemaData>, Vec<SchemaData>) {
+fn decode_json_ld(doc: &Document) -> (Vec<SchemaData>, Vec<SchemaData>, Vec<SchemaData>) {
     let mut persons: Vec<SchemaData> = Vec::new();
     let mut organizations: Vec<SchemaData> = Vec::new();
     let mut articles: Vec<SchemaData> = Vec::new();
@@ -131,13 +129,20 @@ fn decode_json_ld(
         };
 
         // Process the schema(s)
-        process_schema_value(&data, None, 0, &mut persons, &mut organizations, &mut articles);
+        process_schema_value(
+            &data,
+            None,
+            0,
+            &mut persons,
+            &mut organizations,
+            &mut articles,
+        );
     }
 
     // Sort by importance (higher first)
-    persons.sort_by(|a, b| b.importance.cmp(&a.importance));
-    organizations.sort_by(|a, b| b.importance.cmp(&a.importance));
-    articles.sort_by(|a, b| b.importance.cmp(&a.importance));
+    persons.sort_by_key(|item| std::cmp::Reverse(item.importance));
+    organizations.sort_by_key(|item| std::cmp::Reverse(item.importance));
+    articles.sort_by_key(|item| std::cmp::Reverse(item.importance));
 
     (persons, organizations, articles)
 }
@@ -181,7 +186,14 @@ fn process_schema_value(
 
                 // Recurse into nested objects
                 for (_, val) in map {
-                    process_schema_value(val, Some(&schema_data), depth + 1, persons, organizations, articles);
+                    process_schema_value(
+                        val,
+                        Some(&schema_data),
+                        depth + 1,
+                        persons,
+                        organizations,
+                        articles,
+                    );
                 }
             }
         }
@@ -211,13 +223,21 @@ fn get_schema_types_from_value(value: &Value, to_lower: bool) -> Vec<String> {
 
     match type_val {
         Value::String(s) => {
-            let t = if to_lower { s.to_lowercase() } else { s.clone() };
+            let t = if to_lower {
+                s.to_lowercase()
+            } else {
+                s.clone()
+            };
             types.push(t);
         }
         Value::Array(arr) => {
             for item in arr {
                 if let Value::String(s) = item {
-                    let t = if to_lower { s.to_lowercase() } else { s.clone() };
+                    let t = if to_lower {
+                        s.to_lowercase()
+                    } else {
+                        s.clone()
+                    };
                     types.push(t);
                 }
             }
@@ -231,7 +251,11 @@ fn get_schema_types_from_value(value: &Value, to_lower: bool) -> Vec<String> {
 /// Extract names from a schema object.
 ///
 /// Go equivalent: `getSchemaNames(v, expectedTypes...)` (lines 191-266)
-fn get_schema_names(data: &serde_json::Map<String, Value>, _expected_types: &str, _alt_type: &str) -> Option<String> {
+fn get_schema_names(
+    data: &serde_json::Map<String, Value>,
+    _expected_types: &str,
+    _alt_type: &str,
+) -> Option<String> {
     // Try "name" field
     if let Some(Value::String(name)) = data.get("name") {
         let name = name.trim();
@@ -242,10 +266,15 @@ fn get_schema_names(data: &serde_json::Map<String, Value>, _expected_types: &str
 
     // Try composed name (givenName + familyName)
     let given = data.get("givenName").and_then(|v| v.as_str()).unwrap_or("");
-    let family = data.get("familyName").and_then(|v| v.as_str()).unwrap_or("");
+    let family = data
+        .get("familyName")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
 
     if !given.is_empty() || !family.is_empty() {
-        let full_name = format!("{} {}", given.trim(), family.trim()).trim().to_string();
+        let full_name = format!("{} {}", given.trim(), family.trim())
+            .trim()
+            .to_string();
         if !full_name.is_empty() {
             return Some(full_name);
         }
@@ -267,7 +296,11 @@ fn get_string_values(data: &serde_json::Map<String, Value>, key: &str) -> Option
             let s = s.trim();
             if !s.is_empty() {
                 // Split by comma if contains multiple
-                result.extend(s.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()));
+                result.extend(
+                    s.split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty()),
+                );
             }
         }
         Value::Array(arr) => {
@@ -299,11 +332,17 @@ fn get_single_string_value(data: &serde_json::Map<String, Value>, key: &str) -> 
     match value {
         Value::String(s) => {
             let s = s.trim();
-            if s.is_empty() { None } else { Some(s.to_string()) }
+            if s.is_empty() {
+                None
+            } else {
+                Some(s.to_string())
+            }
         }
-        Value::Array(arr) => {
-            arr.first().and_then(|v| v.as_str()).map(|s| s.trim().to_string()).filter(|s| !s.is_empty())
-        }
+        Value::Array(arr) => arr
+            .first()
+            .and_then(|v| v.as_str())
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty()),
         _ => None,
     }
 }
@@ -311,19 +350,34 @@ fn get_single_string_value(data: &serde_json::Map<String, Value>, key: &str) -> 
 // === Helper Functions ===
 
 fn is_person_type(types: &[String]) -> bool {
-    types.iter().any(|t| matches!(t.as_str(), "person" | "author" | "reviewedby" | "creator"))
+    types
+        .iter()
+        .any(|t| matches!(t.as_str(), "person" | "author" | "reviewedby" | "creator"))
 }
 
 fn is_organization_type(types: &[String]) -> bool {
-    types.iter().any(|t| matches!(t.as_str(), "organization" | "newsmediaorganization" | "website" | "publisher"))
+    types.iter().any(|t| {
+        matches!(
+            t.as_str(),
+            "organization" | "newsmediaorganization" | "website" | "publisher"
+        )
+    })
 }
 
 fn is_article_type(types: &[String]) -> bool {
-    types.iter().any(|t| matches!(
-        t.as_str(),
-        "article" | "newsarticle" | "blogposting" | "webpage" | "report"
-        | "techarticle" | "scholarlyarticle" | "socialmediaposting"
-    ))
+    types.iter().any(|t| {
+        matches!(
+            t.as_str(),
+            "article"
+                | "newsarticle"
+                | "blogposting"
+                | "webpage"
+                | "report"
+                | "techarticle"
+                | "scholarlyarticle"
+                | "socialmediaposting"
+        )
+    })
 }
 
 fn calculate_importance(types: &[String], parent: Option<&SchemaData>, depth: i32) -> i32 {
@@ -406,7 +460,10 @@ mod tests {
         let metadata = extract_json_ld(&doc, Metadata::default(), &Options::default());
 
         assert_eq!(metadata.title, Some("Test Article Title".to_string()));
-        assert_eq!(metadata.description, Some("This is the article description.".to_string()));
+        assert_eq!(
+            metadata.description,
+            Some("This is the article description.".to_string())
+        );
         assert_eq!(metadata.author, Some("John Doe".to_string()));
     }
 
@@ -496,7 +553,10 @@ mod tests {
         let doc = Document::from(html);
         let metadata = extract_json_ld(&doc, Metadata::default(), &Options::default());
 
-        assert_eq!(metadata.categories, vec!["technology", "innovation", "software"]);
+        assert_eq!(
+            metadata.categories,
+            vec!["technology", "innovation", "software"]
+        );
     }
 
     #[test]

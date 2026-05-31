@@ -3,10 +3,10 @@
 //! Port of `internal/selector/content.go`.
 //! These rules identify the main content container on a web page.
 
-use std::collections::HashSet;
-use dom_query::{NodeId, Selection};
-use crate::selector::utils::{contains, starts_with, lower, id, class, attr, tag};
+use crate::selector::utils::{attr, class, contains, id, lower, starts_with, tag};
 use crate::selector::Rule;
+use dom_query::{NodeId, Selection};
+use std::collections::HashSet;
 
 /// Content selector rules in priority order
 /// First match wins - check in order
@@ -229,9 +229,7 @@ pub fn content_rule_5(sel: &Selection) -> bool {
     }
 
     // Pattern matching
-    starts_with(&class, "main")
-        || starts_with(&id, "main")
-        || starts_with(&role, "main")
+    starts_with(&class, "main") || starts_with(&id, "main") || starts_with(&role, "main")
 }
 
 /// Rule 6: Generic IDs/classes containing "content" (low priority fallback)
@@ -263,16 +261,42 @@ pub fn content_rule_6(sel: &Selection) -> bool {
     // Exclude obvious boilerplate patterns
     // Extended for modern web (2025+) with complex navigation structures
     let boilerplate_patterns = [
-        "footer", "header", "sidebar", "comment", "share", "social",
-        "related", "nav", "menu", "ad", "promo", "widget", "meta",
+        "footer",
+        "header",
+        "sidebar",
+        "comment",
+        "share",
+        "social",
+        "related",
+        "nav",
+        "menu",
+        "ad",
+        "promo",
+        "widget",
+        "meta",
         // Note: Removed "right" and "left" - too broad, catches legitimate
         // column layouts like "col-9-left", "col_left", "content-left"
         // Modern web patterns (added for 2025+ sites)
-        "dropdown", "popup", "modal", "banner", "cookie", "newsletter",
-        "subscribe", "signup", "login", "signin", "cta", // Call-to-action
-        "ddcards", "cards", // Navigation card patterns (like ct-ddCards)
-        "featured", "trending", "popular", "recommended",
-        "toolbar", "topbar", "bottombar",
+        "dropdown",
+        "popup",
+        "modal",
+        "banner",
+        "cookie",
+        "newsletter",
+        "subscribe",
+        "signup",
+        "login",
+        "signin",
+        "cta", // Call-to-action
+        "ddcards",
+        "cards", // Navigation card patterns (like ct-ddCards)
+        "featured",
+        "trending",
+        "popular",
+        "recommended",
+        "toolbar",
+        "topbar",
+        "bottombar",
     ];
 
     for pattern in boilerplate_patterns {
@@ -294,11 +318,18 @@ const MIN_CONTENT_TEXT_LEN: usize = 1000;
 /// These are used with word-boundary matching to avoid false positives
 /// (e.g., "js-modal-gallery" should NOT match as a modal popup).
 const BOILERPLATE_CLASS_PATTERNS: &[&str] = &[
-    "mega-menu", "navigation", "navbar",
+    "mega-menu",
+    "navigation",
+    "navbar",
     "toolbar",
-    "accordion", "popup", "overlay",
+    "accordion",
+    "popup",
+    "overlay",
     // Listing/related patterns - indicate related/recent article lists, not main content
-    "listing", "latest", "recent", "related",
+    "listing",
+    "latest",
+    "recent",
+    "related",
     // Hero section patterns - intro/header sections, not main content
     "hero",
 ];
@@ -307,7 +338,8 @@ const BOILERPLATE_CLASS_PATTERNS: &[&str] = &[
 /// "sidebar" should only match when it's at the START or immediately after a position word
 /// (like "left-sidebar", "right-sidebar"), NOT when it's at the end of a long namespace
 /// prefix (like "newspaper-x-sidebar" which is a theme class, not an actual sidebar).
-const SIDEBAR_POSITION_WORDS: &[&str] = &["left", "right", "primary", "secondary", "main", "widget"];
+const SIDEBAR_POSITION_WORDS: &[&str] =
+    &["left", "right", "primary", "secondary", "main", "widget"];
 
 /// Check if a class string contains a boilerplate pattern with word boundaries.
 /// Uses simple heuristic: pattern must be at start/end or surrounded by non-alphanumeric chars.
@@ -390,7 +422,7 @@ fn has_exact_word_match(class_str: &str, pattern: &str) -> bool {
         let matches = word == pattern
             || (word.len() > pattern.len()
                 && word.starts_with(pattern)
-                && matches!(word.as_bytes().get(pattern.len()), Some(b'-') | Some(b'_')));
+                && matches!(word.as_bytes().get(pattern.len()), Some(b'-' | b'_')));
 
         if matches {
             // Skip js- prefixed classes (check without allocation)
@@ -477,7 +509,7 @@ impl BoilerplateCache {
         // Find all elements with boilerplate class patterns
         // Only scan elements that have a class attribute (much faster than select("*"))
         for node in root.select("[class]").nodes() {
-            let sel = Selection::from(node.clone());
+            let sel = Selection::from(*node);
             let class_val = class(&sel);
             if class_contains_boilerplate(&class_val) {
                 boilerplate_ids.insert(node.id);
@@ -616,8 +648,8 @@ fn has_nested_content_element(element: &Selection) -> bool {
 /// Wrapper elements that contain both sidebar AND nested content are skipped
 /// in favor of the more specific inner content element.
 pub fn find_content<'a>(root: &Selection<'a>) -> Option<Selection<'a>> {
-    use crate::selector::query_all;
     use crate::dom;
+    use crate::selector::query_all;
 
     // Precompute boilerplate element IDs once for O(1) ancestor lookups
     let boilerplate_cache = BoilerplateCache::new(root);
@@ -773,12 +805,14 @@ mod tests {
         // Rule 1 should match before Rule 2
         // Generate enough content to pass MIN_CONTENT_TEXT_LEN (1000 chars)
         let long_content = "This is substantial article content. ".repeat(50);
-        let doc = dom::parse(&format!(r#"
+        let doc = dom::parse(&format!(
+            r#"
             <div>
                 <article>generic article with short text</article>
                 <div class="post-content">{long_content}</div>
             </div>
-        "#));
+        "#
+        ));
         let root = doc.select("div").first();
 
         let content = find_content(&root).unwrap();
@@ -790,12 +824,15 @@ mod tests {
     fn test_find_content_fallback() {
         // Only Rule 5 should match
         // Generate enough content to pass MIN_CONTENT_TEXT_LEN (1000 chars)
-        let long_content = "This is the main content of the page with substantial text. ".repeat(30);
-        let doc = dom::parse(&format!(r#"
+        let long_content =
+            "This is the main content of the page with substantial text. ".repeat(30);
+        let doc = dom::parse(&format!(
+            r#"
             <div>
                 <main>{long_content}</main>
             </div>
-        "#));
+        "#
+        ));
         let root = doc.select("div").first();
 
         let content = find_content(&root).unwrap();
@@ -806,14 +843,16 @@ mod tests {
     fn test_find_content_skips_header() {
         // Content inside header should be skipped
         let long_content = "This is substantial article content that should be found. ".repeat(30);
-        let doc = dom::parse(&format!(r#"
+        let doc = dom::parse(&format!(
+            r#"
             <div>
                 <header>
                     <div class="post-content">Navigation content in header</div>
                 </header>
                 <article class="post-content">{long_content}</article>
             </div>
-        "#));
+        "#
+        ));
         let root = doc.select("div").first();
 
         let content = find_content(&root);
@@ -826,15 +865,18 @@ mod tests {
     #[test]
     fn test_find_content_skips_nav() {
         // Content inside nav should be skipped
-        let long_content = "This is the main article content with substantial text to extract. ".repeat(25);
-        let doc = dom::parse(&format!(r#"
+        let long_content =
+            "This is the main article content with substantial text to extract. ".repeat(25);
+        let doc = dom::parse(&format!(
+            r#"
             <div>
                 <nav>
                     <div class="content">Navigation links</div>
                 </nav>
                 <main>{long_content}</main>
             </div>
-        "#));
+        "#
+        ));
         let root = doc.select("div").first();
 
         let content = find_content(&root);
@@ -848,22 +890,28 @@ mod tests {
     fn test_find_content_skips_wrapper_with_sidebar() {
         // Outer article wrapping sidebar + inner article should prefer inner article
         // This is the NIH pattern: outer <article> contains sidebar, inner <article class="content_main"> has content
-        let long_content = "This is the main article content from the inner content container. ".repeat(25);
+        let long_content =
+            "This is the main article content from the inner content container. ".repeat(25);
         let sidebar_content = "Sidebar navigation links and menu items. ".repeat(10);
-        let doc = dom::parse(&format!(r#"
+        let doc = dom::parse(&format!(
+            r#"
             <body>
                 <article>
                     <div class="sidebar">{sidebar_content}</div>
                     <article class="content_main">{long_content}</article>
                 </article>
             </body>
-        "#));
+        "#
+        ));
         let root = doc.select("body");
 
         let content = find_content(&root);
         assert!(content.is_some());
         // Should find the inner article with content_main class, not the outer wrapper
         let found = content.unwrap();
-        assert!(class(&found).contains("content_main"), "Should find inner article with content_main class");
+        assert!(
+            class(&found).contains("content_main"),
+            "Should find inner article with content_main class"
+        );
     }
 }

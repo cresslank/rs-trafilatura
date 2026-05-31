@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::{extract_with_options, Options};
 
 /// Test that precision mode applies stricter content selection
@@ -17,7 +25,8 @@ fn precision_mode_is_more_selective() {
         </body></html>
     "#;
 
-    let default_result = extract_with_options(html, &Options::default()).expect("default extraction failed");
+    let default_result =
+        extract_with_options(html, &Options::default()).expect("default extraction failed");
     let precision_options = Options {
         favor_precision: true,
         ..Options::default()
@@ -49,23 +58,47 @@ fn different_modes_use_different_thresholds() {
 
     // All modes should succeed with high-quality content
     let default_result = extract_with_options(high_quality_html, &Options::default());
-    let precision_result = extract_with_options(high_quality_html, &Options {
-        favor_precision: true,
-        ..Options::default()
-    });
-    let recall_result = extract_with_options(high_quality_html, &Options {
-        favor_recall: true,
-        ..Options::default()
-    });
+    let precision_result = extract_with_options(
+        high_quality_html,
+        &Options {
+            favor_precision: true,
+            ..Options::default()
+        },
+    );
+    let recall_result = extract_with_options(
+        high_quality_html,
+        &Options {
+            favor_recall: true,
+            ..Options::default()
+        },
+    );
 
-    assert!(default_result.is_ok(), "default should accept high-quality content");
-    assert!(precision_result.is_ok(), "precision should accept high-quality content");
-    assert!(recall_result.is_ok(), "recall should accept high-quality content");
+    assert!(
+        default_result.is_ok(),
+        "default should accept high-quality content"
+    );
+    assert!(
+        precision_result.is_ok(),
+        "precision should accept high-quality content"
+    );
+    assert!(
+        recall_result.is_ok(),
+        "recall should accept high-quality content"
+    );
 
     // All should contain the paragraph content (headings may or may not be included)
-    assert!(default_result.unwrap().content_text.contains("substantial article"));
-    assert!(precision_result.unwrap().content_text.contains("substantial article"));
-    assert!(recall_result.unwrap().content_text.contains("substantial article"));
+    assert!(default_result
+        .unwrap()
+        .content_text
+        .contains("substantial article"));
+    assert!(precision_result
+        .unwrap()
+        .content_text
+        .contains("substantial article"));
+    assert!(recall_result
+        .unwrap()
+        .content_text
+        .contains("substantial article"));
 }
 
 /// Test conflicting options: both favor_precision and favor_recall
@@ -119,7 +152,8 @@ fn precision_mode_accepts_high_quality_content() {
         ..Options::default()
     };
 
-    let result = extract_with_options(html, &precision_options).expect("high quality content should be extracted");
+    let result = extract_with_options(html, &precision_options)
+        .expect("high quality content should be extracted");
 
     // Paragraph content should be extracted (headings may or may not appear)
     assert!(result.content_text.contains("high-quality article"));
@@ -147,20 +181,32 @@ fn threshold_boundaries_differentiate_modes() {
     "#;
 
     let default_result = extract_with_options(html, &Options::default());
-    let precision_result = extract_with_options(html, &Options {
-        favor_precision: true,
-        ..Options::default()
-    });
-    let recall_result = extract_with_options(html, &Options {
-        favor_recall: true,
-        ..Options::default()
-    });
+    let precision_result = extract_with_options(
+        html,
+        &Options {
+            favor_precision: true,
+            ..Options::default()
+        },
+    );
+    let recall_result = extract_with_options(
+        html,
+        &Options {
+            favor_recall: true,
+            ..Options::default()
+        },
+    );
 
     // Default should succeed with medium-quality content
-    assert!(default_result.is_ok(), "default mode should accept medium-quality content");
+    assert!(
+        default_result.is_ok(),
+        "default mode should accept medium-quality content"
+    );
 
     // Recall should definitely succeed (lowest threshold)
-    assert!(recall_result.is_ok(), "recall mode should accept medium-quality content");
+    assert!(
+        recall_result.is_ok(),
+        "recall mode should accept medium-quality content"
+    );
 
     // Precision may or may not succeed depending on exact score
     // But if it does succeed, content should be identical or subset
@@ -245,5 +291,8 @@ fn precision_mode_filters_link_heavy_content() {
     // Should minimize link-heavy content
     let link_count = result.content_text.matches("Link").count();
     // In precision mode, link-heavy sections should be deprioritized
-    assert!(link_count < 4, "precision mode should avoid link-heavy content");
+    assert!(
+        link_count < 4,
+        "precision mode should avoid link-heavy content"
+    );
 }

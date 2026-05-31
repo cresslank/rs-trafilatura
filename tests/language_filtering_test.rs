@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::{extract_with_options, Options};
 
 /// Test AC#1: Target language filters out non-matching content
@@ -269,7 +277,8 @@ fn document_language_used_when_no_element_lang() {
     };
 
     let result_de = extract_with_options(html, &options_de).expect("extraction failed");
-    let result_en = extract_with_options(html, &options_en).expect("extraction should succeed with graceful degradation");
+    let result_en = extract_with_options(html, &options_en)
+        .expect("extraction should succeed with graceful degradation");
 
     // Should extract with de target (matches document lang)
     assert!(result_de.content_text.contains("explizite Sprachangabe"));
@@ -335,7 +344,10 @@ fn language_filtering_doesnt_affect_metadata() {
 
     // Metadata should still be extracted regardless of target language
     assert_eq!(result.metadata.title.as_deref(), Some("English Title"));
-    assert_eq!(result.metadata.description.as_deref(), Some("English description"));
+    assert_eq!(
+        result.metadata.description.as_deref(),
+        Some("English description")
+    );
 
     // Content should contain German text
     assert!(result.content_text.contains("Deutscher Inhalt"));

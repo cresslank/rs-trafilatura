@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 // EPIC-02 Spike Validation: Test the full markdown pipeline
 // Tests our integration (quick_html2md + our post-processing)
 // Run: cargo test --test spike_markdown_validation
@@ -45,8 +53,10 @@ mod markdown_validation_tests {
         let html = "<p>text with *asterisks*</p>";
         let md = to_markdown(html);
         // html-cleaning preserves literal asterisks (doesn't render as italic)
-        assert!(md.contains("*asterisks*"),
-            "Literal asterisks should be preserved: {}", md);
+        assert!(
+            md.contains("*asterisks*"),
+            "Literal asterisks should be preserved: {md}"
+        );
     }
 
     #[test]
@@ -54,8 +64,10 @@ mod markdown_validation_tests {
         let html = "<p>text with _underscores_</p>";
         let md = to_markdown(html);
         // html-cleaning preserves literal underscores
-        assert!(md.contains("_underscores_"),
-            "Literal underscores should be preserved: {}", md);
+        assert!(
+            md.contains("_underscores_"),
+            "Literal underscores should be preserved: {md}"
+        );
     }
 
     // P1: Lists (these work)
@@ -108,8 +120,10 @@ mod markdown_validation_tests {
             <tr><td>Data</td></tr>
         </table>"#;
         let md = html_table_to_markdown(html);
-        assert!(md.contains(":--") || md.contains("---"),
-            "Table should have alignment: {}", md);
+        assert!(
+            md.contains(":--") || md.contains("---"),
+            "Table should have alignment: {md}"
+        );
     }
 
     // Code blocks work
@@ -132,38 +146,44 @@ mod markdown_validation_tests {
     fn test_preserves_bold_formatting() {
         let html = "<p>This is **bold** text</p>";
         let md = to_markdown(html);
-        assert!(md.contains("**bold**"),
-            "Bold formatting should be preserved: {}", md);
+        assert!(
+            md.contains("**bold**"),
+            "Bold formatting should be preserved: {md}"
+        );
     }
 
     #[test]
     fn test_preserves_italic_formatting() {
         let html = "<p>This is *italic* text</p>";
         let md = to_markdown(html);
-        assert!(md.contains("*italic*"),
-            "Italic formatting should be preserved: {}", md);
+        assert!(
+            md.contains("*italic*"),
+            "Italic formatting should be preserved: {md}"
+        );
     }
 
     #[test]
     fn test_preserves_code_blocks() {
         let html = "<pre><code>*not escaped*</code></pre>";
         let md = to_markdown(html);
-        assert!(md.contains("*not escaped*"),
-            "Code blocks should not escape: {}", md);
+        assert!(
+            md.contains("*not escaped*"),
+            "Code blocks should not escape: {md}"
+        );
     }
 
     // Edge cases
     #[test]
     fn test_empty_elements() {
         let html = "<p></p><strong></strong><em></em>";
-        let md = to_markdown(html);
+        let _md = to_markdown(html);
         assert!(true, "Empty elements handled gracefully");
     }
 
     #[test]
     fn test_malformed_html() {
         let html = "<p>unclosed paragraph";
-        let md = to_markdown(html);
+        let _md = to_markdown(html);
         assert!(true, "Malformed HTML handled without panic");
     }
 
@@ -196,8 +216,10 @@ mod markdown_validation_tests {
         let result = extract(html).unwrap();
 
         // content_markdown should be None when not enabled
-        assert!(result.content_markdown.is_none(),
-            "Markdown should be None when output_markdown is disabled");
+        assert!(
+            result.content_markdown.is_none(),
+            "Markdown should be None when output_markdown is disabled"
+        );
     }
 
     /// Integration test: Full markdown pipeline preserves document structure
@@ -230,15 +252,21 @@ mod markdown_validation_tests {
         let result = extract_with_options(html, &options).unwrap();
 
         // Markdown output should exist
-        assert!(result.content_markdown.is_some(), "Markdown should be populated");
+        assert!(
+            result.content_markdown.is_some(),
+            "Markdown should be populated"
+        );
 
         let md = result.content_markdown.unwrap();
 
         // Should have document structure
-        assert!(md.contains("# Article Title"), "Should have heading: {}", md);
+        assert!(md.contains("# Article Title"), "Should have heading: {md}");
         assert!(md.contains("First item"), "Should have list item");
         assert!(md.contains("Second item"), "Should have second list item");
-        assert!(md.contains("Conclusion"), "Should have conclusion paragraph");
+        assert!(
+            md.contains("Conclusion"),
+            "Should have conclusion paragraph"
+        );
     }
 
     /// Integration test: Code blocks are preserved in markdown output
@@ -317,7 +345,10 @@ mod markdown_validation_tests {
         let result = extract_with_options(html, &options).unwrap();
 
         // Verify markdown is generated when option is enabled
-        assert!(result.content_markdown.is_some(), "Markdown should be populated");
+        assert!(
+            result.content_markdown.is_some(),
+            "Markdown should be populated"
+        );
         let md = result.content_markdown.unwrap();
         assert!(!md.is_empty(), "Markdown should not be empty");
 
@@ -375,9 +406,14 @@ mod markdown_validation_tests {
         let result = extract_with_options(html, &options).unwrap();
 
         // Key assertion: markdown is populated when option is enabled
-        assert!(result.content_markdown.is_some(), "Markdown should be Some when output_markdown=true");
-        assert!(!result.content_markdown.unwrap().is_empty(),
-            "Markdown should not be empty");
+        assert!(
+            result.content_markdown.is_some(),
+            "Markdown should be Some when output_markdown=true"
+        );
+        assert!(
+            !result.content_markdown.unwrap().is_empty(),
+            "Markdown should not be empty"
+        );
     }
 
     /// Integration test: Markdown is None when disabled
@@ -396,7 +432,9 @@ mod markdown_validation_tests {
         let result = extract(html).unwrap();
 
         // When output_markdown is false (default), content_markdown should be None
-        assert!(result.content_markdown.is_none(),
-            "Markdown should be None when output_markdown is false (default)");
+        assert!(
+            result.content_markdown.is_none(),
+            "Markdown should be None when output_markdown is false (default)"
+        );
     }
 }

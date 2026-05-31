@@ -21,39 +21,33 @@ use crate::Options;
 
 /// Regex pattern for splitting titles by common separators
 #[allow(clippy::expect_used)]
-static TITLE_SEPARATOR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\s*[\|–—·]\s*|\s+-\s+|\s*:\s+").expect("valid regex")
-});
+static TITLE_SEPARATOR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\s*[\|–—·]\s*|\s+-\s+|\s*:\s+").expect("valid regex"));
 
 /// Regex pattern for splitting sitename from title
 #[allow(clippy::expect_used)]
-static SITENAME_SEPARATOR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\s*[\|–—]\s*|\s+-\s+").expect("valid regex")
-});
+static SITENAME_SEPARATOR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\s*[\|–—]\s*|\s+-\s+").expect("valid regex"));
 
 /// Regex pattern for email addresses
 #[allow(clippy::expect_used)]
-static EMAIL_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\S+@\S+\.\S+").expect("valid regex")
-});
+static EMAIL_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\S+@\S+\.\S+").expect("valid regex"));
 
 /// Regex pattern for Twitter handles
 #[allow(clippy::expect_used)]
-static TWITTER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"@\w+").expect("valid regex")
-});
+static TWITTER_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"@\w+").expect("valid regex"));
 
 /// Regex pattern for "and X more" patterns
 #[allow(clippy::expect_used)]
-static MORE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\s+and\s+\d+\s+more.*$").expect("valid regex")
-});
+static MORE_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)\s+and\s+\d+\s+more.*$").expect("valid regex"));
 
 /// Regex pattern for Creative Commons licenses
 #[allow(clippy::expect_used)]
-static CC_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"creativecommons\.org/licenses/([a-z-]+)/").expect("valid regex")
-});
+static CC_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"creativecommons\.org/licenses/([a-z-]+)/").expect("valid regex"));
 
 // ============================================================
 // TITLE EXTRACTION
@@ -80,7 +74,8 @@ pub fn examine_title_element(doc: &Document) -> Option<String> {
 
     if parts.len() > 1 {
         // Usually the main title is the longest part or the first substantial part
-        let main_part = parts.iter()
+        let main_part = parts
+            .iter()
             .max_by_key(|p| p.len())
             .map(|s| s.trim().to_string());
 
@@ -204,8 +199,7 @@ fn extract_author_text(elem: &Selection) -> String {
     let text = etree::iter_text(elem, " ").trim().to_string();
 
     // Clean up common prefixes
-    text
-        .strip_prefix("By ")
+    text.strip_prefix("By ")
         .or_else(|| text.strip_prefix("by "))
         .or_else(|| text.strip_prefix("Written by "))
         .unwrap_or(&text)
@@ -528,7 +522,13 @@ pub fn extract_dom_license(doc: &Document, original: Metadata, _opts: &Options) 
     }
 
     // Check footer area first
-    for selector in ["footer", ".footer", "#footer", "[class*='license']", "[class*='copyright']"] {
+    for selector in [
+        "footer",
+        ".footer",
+        "#footer",
+        "[class*='license']",
+        "[class*='copyright']",
+    ] {
         for node in doc.select(selector).nodes() {
             let elem = Selection::from(*node);
 
@@ -538,7 +538,8 @@ pub fn extract_dom_license(doc: &Document, original: Metadata, _opts: &Options) 
                 if let Some(href) = dom::get_attribute(&a, "href") {
                     if let Some(caps) = CC_PATTERN.captures(&href) {
                         if let Some(license_type) = caps.get(1) {
-                            result.license = Some(format!("CC {}", license_type.as_str().to_uppercase()));
+                            result.license =
+                                Some(format!("CC {}", license_type.as_str().to_uppercase()));
                             return result;
                         }
                     }
@@ -577,7 +578,8 @@ mod tests {
 
     #[test]
     fn test_examine_title_element_with_separator() {
-        let html = "<html><head><title>Article Title | Site Name</title></head><body></body></html>";
+        let html =
+            "<html><head><title>Article Title | Site Name</title></head><body></body></html>";
         let doc = Document::from(html);
         let title = examine_title_element(&doc);
         // Should extract the longer part
@@ -601,8 +603,11 @@ mod tests {
         // <title> takes priority over h1; separator splits "Page Title | Site" → "Page Title"
         assert!(metadata.title.is_some());
         let title = metadata.title.unwrap();
-        assert!(title.contains("Page Title") || title.contains("Site"),
-            "title should come from <title> tag; got: {:?}", title);
+        assert!(
+            title.contains("Page Title") || title.contains("Site"),
+            "title should come from <title> tag; got: {:?}",
+            title
+        );
     }
 
     #[test]
@@ -632,7 +637,10 @@ mod tests {
 
         let doc = Document::from(html);
         let metadata = extract_dom_url(&doc, Metadata::default(), &Options::default());
-        assert_eq!(metadata.url, Some("https://example.com/article".to_string()));
+        assert_eq!(
+            metadata.url,
+            Some("https://example.com/article".to_string())
+        );
     }
 
     #[test]
@@ -684,10 +692,7 @@ mod tests {
 
     #[test]
     fn test_clean_cat_tags() {
-        let input = vec![
-            "Technology".to_string(),
-            "Science, Innovation".to_string(),
-        ];
+        let input = vec!["Technology".to_string(), "Science, Innovation".to_string()];
         let result = clean_cat_tags(input);
         assert_eq!(result, vec!["Technology", "Science", "Innovation"]);
     }

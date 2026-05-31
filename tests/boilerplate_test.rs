@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::extract;
 
 /// Padding to ensure content extraction threshold is met (avoids fallback path)
@@ -28,7 +36,8 @@ fn nav_is_excluded_even_inside_article() {
 
 #[test]
 fn site_footer_is_excluded_but_article_footer_is_preserved() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html>
           <body>
             <footer>SITE_FOOTER_TEXT</footer>
@@ -39,15 +48,19 @@ fn site_footer_is_excluded_but_article_footer_is_preserved() {
             </article>
           </body>
         </html>
-    "#);
+    "#
+    );
 
     let result = extract(&html);
     match result {
         Ok(result) => {
             assert!(result.content_text.contains("ARTICLE_BODY"));
             // Article footer content should be preserved (inside article tag)
-            assert!(result.content_text.contains("ARTICLE_FOOTER_TEXT"),
-                "article footer should be preserved; content_text={:?}", result.content_text);
+            assert!(
+                result.content_text.contains("ARTICLE_FOOTER_TEXT"),
+                "article footer should be preserved; content_text={:?}",
+                result.content_text
+            );
             assert!(!result.content_text.contains("SITE_FOOTER_TEXT"));
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
@@ -79,7 +92,8 @@ fn aside_is_excluded_even_inside_article() {
 
 #[test]
 fn related_and_recommended_sections_are_excluded_by_class() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html>
           <body>
             <article>
@@ -91,18 +105,28 @@ fn related_and_recommended_sections_are_excluded_by_class() {
             </article>
           </body>
         </html>
-    "#);
+    "#
+    );
 
     let result = extract(&html);
     match result {
         Ok(result) => {
             assert!(result.content_text.contains("ARTICLE_BODY"));
-            assert!(!result.content_text.contains("RECOMMENDED_TEXT"),
-                "recommended sections should be excluded; content_text={:?}", result.content_text);
-            assert!(!result.content_text.contains("MORE_FROM_TEXT"),
-                "more-from sections should be excluded; content_text={:?}", result.content_text);
-            assert!(!result.content_text.contains("YOU_MAY_LIKE_TEXT"),
-                "you-may-like sections should be excluded; content_text={:?}", result.content_text);
+            assert!(
+                !result.content_text.contains("RECOMMENDED_TEXT"),
+                "recommended sections should be excluded; content_text={:?}",
+                result.content_text
+            );
+            assert!(
+                !result.content_text.contains("MORE_FROM_TEXT"),
+                "more-from sections should be excluded; content_text={:?}",
+                result.content_text
+            );
+            assert!(
+                !result.content_text.contains("YOU_MAY_LIKE_TEXT"),
+                "you-may-like sections should be excluded; content_text={:?}",
+                result.content_text
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
@@ -167,7 +191,8 @@ fn schema_org_breadcrumb_list_inside_article_is_excluded() {
 #[test]
 fn site_header_is_excluded_but_article_header_is_preserved() {
     // Use a title tag so the h2 in the article header is not treated as page title
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html>
           <head><title>My Site</title></head>
           <body>
@@ -183,7 +208,8 @@ fn site_header_is_excluded_but_article_header_is_preserved() {
             </article>
           </body>
         </html>
-    "#);
+    "#
+    );
 
     let result = extract(&html);
     match result {
@@ -334,7 +360,8 @@ fn site_nav_class_is_excluded() {
 #[test]
 fn header_inside_main_is_preserved() {
     // Use a title tag so the h2 in the main header is not treated as page title
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html>
           <head><title>My Site</title></head>
           <body>
@@ -348,13 +375,17 @@ fn header_inside_main_is_preserved() {
             </main>
           </body>
         </html>
-    "#);
+    "#
+    );
 
     let result = extract(&html);
     match result {
         Ok(result) => {
-            assert!(result.content_text.contains("MAIN_SECTION_HEADING"),
-                "header inside main should be preserved; content_text={}", result.content_text);
+            assert!(
+                result.content_text.contains("MAIN_SECTION_HEADING"),
+                "header inside main should be preserved; content_text={}",
+                result.content_text
+            );
             assert!(result.content_text.contains("MAIN_BODY"));
             assert!(!result.content_text.contains("SITE_HEADER_TEXT"));
         }
@@ -502,7 +533,8 @@ fn banner_ad_id_is_excluded() {
 
 #[test]
 fn address_class_is_not_treated_as_ad() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html>
           <body>
             <article>
@@ -512,17 +544,24 @@ fn address_class_is_not_treated_as_ad() {
             </article>
           </body>
         </html>
-    "#);
+    "#
+    );
 
     let result = extract(&html);
     match result {
         Ok(result) => {
             // "address" class should not be treated as an ad pattern
             // Both article body and address div should be extracted
-            assert!(result.content_text.contains("BODY_TEXT"),
-                "article body should be extracted; content_text={:?}", result.content_text);
-            assert!(result.content_text.contains("ADDRESS_TEXT"),
-                "address class should not be treated as ad; content_text={:?}", result.content_text);
+            assert!(
+                result.content_text.contains("BODY_TEXT"),
+                "article body should be extracted; content_text={:?}",
+                result.content_text
+            );
+            assert!(
+                result.content_text.contains("ADDRESS_TEXT"),
+                "address class should not be treated as ad; content_text={:?}",
+                result.content_text
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
@@ -576,7 +615,8 @@ fn social_widget_is_excluded() {
 
 #[test]
 fn footer_inside_main_is_preserved() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html>
           <body>
             <footer>SITE_FOOTER_TEXT</footer>
@@ -587,15 +627,19 @@ fn footer_inside_main_is_preserved() {
             </main>
           </body>
         </html>
-    "#);
+    "#
+    );
 
     let result = extract(&html);
     match result {
         Ok(result) => {
             assert!(result.content_text.contains("MAIN_BODY"));
             // Footer inside main should be preserved (not treated as site footer)
-            assert!(result.content_text.contains("MAIN_FOOTER_TEXT"),
-                "footer inside main should be preserved; content_text={:?}", result.content_text);
+            assert!(
+                result.content_text.contains("MAIN_FOOTER_TEXT"),
+                "footer inside main should be preserved; content_text={:?}",
+                result.content_text
+            );
             assert!(!result.content_text.contains("SITE_FOOTER_TEXT"));
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),

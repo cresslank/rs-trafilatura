@@ -93,9 +93,7 @@ fn test_extract_very_large_document() {
         .collect::<Vec<_>>()
         .join("\n");
 
-    let html = format!(
-        "<html><body><article>{paragraphs}</article></body></html>"
-    );
+    let html = format!("<html><body><article>{paragraphs}</article></body></html>");
 
     let opts = Options {
         max_extracted_len: 50_000, // Limit output size

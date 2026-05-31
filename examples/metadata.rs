@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 //! Metadata extraction example for rs-trafilatura.
 //!
 //! This example demonstrates all available metadata fields.

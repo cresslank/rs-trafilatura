@@ -40,49 +40,40 @@ pub static XML_CELL_TAGS: [&str; 2] = ["th", "td"];
 // === Tag Sets (HashSets for O(1) lookup) ===
 
 /// `XML_LIST_TAGS` as a `HashSet`
-pub static XML_LIST_TAG_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    XML_LIST_TAGS.into_iter().collect()
-});
+pub static XML_LIST_TAG_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| XML_LIST_TAGS.into_iter().collect());
 
 /// `XML_QUOTE_TAGS` as a `HashSet`
-pub static XML_QUOTE_TAG_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    XML_QUOTE_TAGS.into_iter().collect()
-});
+pub static XML_QUOTE_TAG_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| XML_QUOTE_TAGS.into_iter().collect());
 
 /// `XML_HEAD_TAGS` as a `HashSet`
-pub static XML_HEAD_TAG_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    XML_HEAD_TAGS.into_iter().collect()
-});
+pub static XML_HEAD_TAG_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| XML_HEAD_TAGS.into_iter().collect());
 
 /// `XML_LB_TAGS` as a `HashSet`
-pub static XML_LB_TAG_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    XML_LB_TAGS.into_iter().collect()
-});
+pub static XML_LB_TAG_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| XML_LB_TAGS.into_iter().collect());
 
 /// `XML_HI_TAGS` as a `HashSet`
-pub static XML_HI_TAG_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    XML_HI_TAGS.into_iter().collect()
-});
+pub static XML_HI_TAG_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| XML_HI_TAGS.into_iter().collect());
 
 /// `XML_REF_TAGS` as a `HashSet`
-pub static XML_REF_TAG_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    XML_REF_TAGS.into_iter().collect()
-});
+pub static XML_REF_TAG_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| XML_REF_TAGS.into_iter().collect());
 
 /// `XML_GRAPHIC_TAGS` as a `HashSet`
-pub static XML_GRAPHIC_TAG_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    XML_GRAPHIC_TAGS.into_iter().collect()
-});
+pub static XML_GRAPHIC_TAG_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| XML_GRAPHIC_TAGS.into_iter().collect());
 
 /// `XML_ITEM_TAGS` as a `HashSet`
-pub static XML_ITEM_TAG_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    XML_ITEM_TAGS.into_iter().collect()
-});
+pub static XML_ITEM_TAG_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| XML_ITEM_TAGS.into_iter().collect());
 
 /// `XML_CELL_TAGS` as a `HashSet`
-pub static XML_CELL_TAG_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    XML_CELL_TAGS.into_iter().collect()
-});
+pub static XML_CELL_TAG_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| XML_CELL_TAGS.into_iter().collect());
 
 // === Cleaning Tag Lists ===
 
@@ -94,50 +85,65 @@ pub static TAGS_TO_CLEAN: [&str; 50] = [
     // other content
     "applet", "audio", "canvas", "figure", "map", "picture", "svg", "video",
     // secondary
-    "area", "blink", "button", "datalist", "dialog", "frame", "frameset", "fieldset",
-    "link", "input", "ins", "label", "legend", "marquee", "math", "menuitem", "nav",
-    "noscript", "optgroup", "option", "output", "param", "progress", "rp", "rt", "rtc",
-    "select", "source", "style", "track", "textarea", "time", "use",
+    "area", "blink", "button", "datalist", "dialog", "frame", "frameset", "fieldset", "link",
+    "input", "ins", "label", "legend", "marquee", "math", "menuitem", "nav", "noscript",
+    "optgroup", "option", "output", "param", "progress", "rp", "rt", "rtc", "select", "source",
+    "style", "track", "textarea", "time", "use",
 ];
 
 /// `TAGS_TO_CLEAN` as a `HashSet`
-pub static TAGS_TO_CLEAN_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    TAGS_TO_CLEAN.into_iter().collect()
-});
+pub static TAGS_TO_CLEAN_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| TAGS_TO_CLEAN.into_iter().collect());
 
 /// Tags to strip (remove tag but keep children) during document cleaning.
 /// From go-trafilatura settings.go `tagsToStrip`.
 pub static TAGS_TO_STRIP: [&str; 18] = [
-    "abbr", "acronym", "address", "bdi", "bdo", "big", "cite", "data", "dfn", "font",
-    "hgroup", "img", "ins", "mark", "meta", "ruby", "small", "template",
+    "abbr", "acronym", "address", "bdi", "bdo", "big", "cite", "data", "dfn", "font", "hgroup",
+    "img", "ins", "mark", "meta", "ruby", "small", "template",
 ];
 
 /// `TAGS_TO_STRIP` as a `HashSet`
-pub static TAGS_TO_STRIP_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    TAGS_TO_STRIP.into_iter().collect()
-});
+pub static TAGS_TO_STRIP_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| TAGS_TO_STRIP.into_iter().collect());
 
 /// Tags to remove if they are empty (no text content).
 /// From go-trafilatura settings.go `emptyTagsToRemove`.
 pub static EMPTY_TAGS_TO_REMOVE: [&str; 22] = [
-    "article", "b", "blockquote", "dd", "div", "dt", "em",
-    "h1", "h2", "h3", "h4", "h5", "h6", "i", "li", "main",
-    "p", "pre", "q", "section", "span", "strong",
+    "article",
+    "b",
+    "blockquote",
+    "dd",
+    "div",
+    "dt",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "i",
+    "li",
+    "main",
+    "p",
+    "pre",
+    "q",
+    "section",
+    "span",
+    "strong",
 ];
 
 /// `EMPTY_TAGS_TO_REMOVE` as a `HashSet`
-pub static EMPTY_TAGS_TO_REMOVE_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    EMPTY_TAGS_TO_REMOVE.into_iter().collect()
-});
+pub static EMPTY_TAGS_TO_REMOVE_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| EMPTY_TAGS_TO_REMOVE.into_iter().collect());
 
 /// Table structure tags to strip (keep children).
 /// From go-trafilatura settings.go `tagsToStrip` (table-related subset).
 pub static TABLE_TAGS_TO_STRIP: [&str; 3] = ["tbody", "tfoot", "thead"];
 
 /// `TABLE_TAGS_TO_STRIP` as a `HashSet`
-pub static TABLE_TAGS_TO_STRIP_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    TABLE_TAGS_TO_STRIP.into_iter().collect()
-});
+pub static TABLE_TAGS_TO_STRIP_SET: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| TABLE_TAGS_TO_STRIP.into_iter().collect());
 
 // === Helper Functions for Cleaning ===
 
@@ -167,39 +173,163 @@ pub fn should_remove_if_empty(tag: &str) -> bool {
 /// `TAG_CATALOG` from settings.go - default set of content tags
 pub static TAG_CATALOG: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     [
-        "blockquote", "code",
-        "del", "s", "strike",
-        "h1", "h2", "h3", "h4", "h5", "h6",
-        "em", "i", "b", "strong", "u", "kbd", "samp", "tt", "var", "sub", "sup",
-        "br", "hr",
-        "ul", "ol", "dl",
-        "p", "pre", "q",
-        "details", "summary",
-    ].into_iter().collect()
+        "blockquote",
+        "code",
+        "del",
+        "s",
+        "strike",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "em",
+        "i",
+        "b",
+        "strong",
+        "u",
+        "kbd",
+        "samp",
+        "tt",
+        "var",
+        "sub",
+        "sup",
+        "br",
+        "hr",
+        "ul",
+        "ol",
+        "dl",
+        "p",
+        "pre",
+        "q",
+        "details",
+        "summary",
+    ]
+    .into_iter()
+    .collect()
 });
 
 /// `FORMAT_TAG_CATALOG` from settings.go - formatting tags
 pub static FORMAT_TAG_CATALOG: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     [
-        "em", "i", "b", "strong", "u", "kbd",
-        "samp", "tt", "var", "sub", "sup",
-    ].into_iter().collect()
+        "em", "i", "b", "strong", "u", "kbd", "samp", "tt", "var", "sub", "sup",
+    ]
+    .into_iter()
+    .collect()
 });
 
 /// `VALID_TAG_CATALOG` from settings.go - all valid HTML tags
 pub static VALID_TAG_CATALOG: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     [
-        "a", "abbr", "address", "area", "b", "base", "bdo", "blockquote", "body", "br", "button",
-        "caption", "cite", "code", "col", "colgroup", "dd", "del", "dfn", "div", "dl", "dt", "em",
-        "fieldset", "form", "h1", "h2", "h3", "h4", "h5", "h6", "head", "hr", "html", "i", "iframe",
-        "img", "input", "ins", "kbd", "label", "legend", "li", "link", "map", "menu", "meta",
-        "noscript", "object", "ol", "optgroup", "option", "p", "param", "pre", "q", "s", "samp",
-        "script", "select", "small", "span", "strong", "style", "sub", "sup", "table", "tbody",
-        "td", "textarea", "tfoot", "th", "thead", "title", "tr", "u", "ul", "var", "article",
-        "aside", "audio", "canvas", "command", "datalist", "details", "embed", "figcaption",
-        "figure", "footer", "header", "mark", "meter", "nav", "output", "progress", "rp", "rt",
-        "ruby", "section", "source", "summary", "time", "track", "video", "wbr",
-    ].into_iter().collect()
+        "a",
+        "abbr",
+        "address",
+        "area",
+        "b",
+        "base",
+        "bdo",
+        "blockquote",
+        "body",
+        "br",
+        "button",
+        "caption",
+        "cite",
+        "code",
+        "col",
+        "colgroup",
+        "dd",
+        "del",
+        "dfn",
+        "div",
+        "dl",
+        "dt",
+        "em",
+        "fieldset",
+        "form",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "head",
+        "hr",
+        "html",
+        "i",
+        "iframe",
+        "img",
+        "input",
+        "ins",
+        "kbd",
+        "label",
+        "legend",
+        "li",
+        "link",
+        "map",
+        "menu",
+        "meta",
+        "noscript",
+        "object",
+        "ol",
+        "optgroup",
+        "option",
+        "p",
+        "param",
+        "pre",
+        "q",
+        "s",
+        "samp",
+        "script",
+        "select",
+        "small",
+        "span",
+        "strong",
+        "style",
+        "sub",
+        "sup",
+        "table",
+        "tbody",
+        "td",
+        "textarea",
+        "tfoot",
+        "th",
+        "thead",
+        "title",
+        "tr",
+        "u",
+        "ul",
+        "var",
+        "article",
+        "aside",
+        "audio",
+        "canvas",
+        "command",
+        "datalist",
+        "details",
+        "embed",
+        "figcaption",
+        "figure",
+        "footer",
+        "header",
+        "mark",
+        "meter",
+        "nav",
+        "output",
+        "progress",
+        "rp",
+        "rt",
+        "ruby",
+        "section",
+        "source",
+        "summary",
+        "time",
+        "track",
+        "video",
+        "wbr",
+    ]
+    .into_iter()
+    .collect()
 });
 
 // === Helper Functions ===
@@ -364,7 +494,7 @@ mod tests {
         assert!(is_in_tag_catalog("p"));
         assert!(is_in_tag_catalog("blockquote"));
         assert!(is_in_tag_catalog("h1"));
-        assert!(!is_in_tag_catalog("div"));  // div not in default catalog
+        assert!(!is_in_tag_catalog("div")); // div not in default catalog
         assert!(!is_in_tag_catalog("table")); // table added via options
     }
 
@@ -475,10 +605,16 @@ mod tests {
             assert!(TAGS_TO_STRIP_SET.contains(tag), "Missing in set: {tag}");
         }
         for tag in &EMPTY_TAGS_TO_REMOVE {
-            assert!(EMPTY_TAGS_TO_REMOVE_SET.contains(tag), "Missing in set: {tag}");
+            assert!(
+                EMPTY_TAGS_TO_REMOVE_SET.contains(tag),
+                "Missing in set: {tag}"
+            );
         }
         for tag in &TABLE_TAGS_TO_STRIP {
-            assert!(TABLE_TAGS_TO_STRIP_SET.contains(tag), "Missing in set: {tag}");
+            assert!(
+                TABLE_TAGS_TO_STRIP_SET.contains(tag),
+                "Missing in set: {tag}"
+            );
         }
     }
 
@@ -487,6 +623,10 @@ mod tests {
         // Verify tag counts match go-trafilatura settings.go
         assert_eq!(TAGS_TO_CLEAN.len(), 50, "tagsToClean should have 50 tags");
         assert_eq!(TAGS_TO_STRIP.len(), 18, "tagsToStrip should have 18 tags");
-        assert_eq!(EMPTY_TAGS_TO_REMOVE.len(), 22, "emptyTagsToRemove should have 22 tags");
+        assert_eq!(
+            EMPTY_TAGS_TO_REMOVE.len(),
+            22,
+            "emptyTagsToRemove should have 22 tags"
+        );
     }
 }

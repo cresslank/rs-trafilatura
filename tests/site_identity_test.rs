@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::{extract, extract_with_options, Options};
 
 #[test]
@@ -31,7 +39,10 @@ fn url_from_canonical_link() {
 
     let result = extract(html);
     match result {
-        Ok(result) => assert_eq!(result.metadata.url.as_deref(), Some("https://example.com/canonical")),
+        Ok(result) => assert_eq!(
+            result.metadata.url.as_deref(),
+            Some("https://example.com/canonical")
+        ),
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
 }
@@ -49,7 +60,10 @@ fn url_falls_back_to_og_url_when_no_canonical() {
 
     let result = extract(html);
     match result {
-        Ok(result) => assert_eq!(result.metadata.url.as_deref(), Some("https://example.com/og")),
+        Ok(result) => assert_eq!(
+            result.metadata.url.as_deref(),
+            Some("https://example.com/og")
+        ),
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
 }
@@ -136,8 +150,14 @@ fn hostname_falls_back_to_extracted_url_when_no_options_url() {
     let result = extract(html);
     match result {
         Ok(result) => {
-            assert_eq!(result.metadata.url.as_deref(), Some("https://fallback-example.com/article"));
-            assert_eq!(result.metadata.hostname.as_deref(), Some("fallback-example.com"));
+            assert_eq!(
+                result.metadata.url.as_deref(),
+                Some("https://fallback-example.com/article")
+            );
+            assert_eq!(
+                result.metadata.hostname.as_deref(),
+                Some("fallback-example.com")
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }

@@ -27,7 +27,7 @@
 
 use spider::page::Page;
 
-use crate::{Options, Result, ExtractResult};
+use crate::{ExtractResult, Options, Result};
 
 /// Extracts main content from a spider [`Page`] using default options.
 ///
@@ -53,8 +53,8 @@ pub fn extract_page_with_options(page: &Page, options: &Options) -> Result<Extra
 mod tests {
     use super::*;
     use spider::page::build;
-    use spider::utils::PageResponse;
     use spider::reqwest::StatusCode;
+    use spider::utils::PageResponse;
 
     fn make_test_page(url: &str, html: &str) -> Page {
         let response = PageResponse {
@@ -85,7 +85,10 @@ mod tests {
         let result = extract_page(&page).expect("extraction should succeed");
 
         assert!(!result.content_text.is_empty(), "should extract content");
-        assert!(result.content_text.contains("test paragraph"), "should contain article text");
+        assert!(
+            result.content_text.contains("test paragraph"),
+            "should contain article text"
+        );
         assert!(result.extraction_quality >= 0.0 && result.extraction_quality <= 1.0);
     }
 

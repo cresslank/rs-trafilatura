@@ -1,10 +1,20 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::extract;
 
 const PADDING: &str = "<p>Additional paragraph content to ensure this document meets the minimum content threshold required for extraction to succeed.</p><p>Further padding paragraph with enough text to satisfy the scoring algorithm that evaluates content quality and density.</p>";
 
 #[test]
 fn extract_returns_content_html_with_block_structure() {
-    let html = format!("<article><h2>Heading</h2><p>Para content here to be extracted.</p>{PADDING}</article>");
+    let html = format!(
+        "<article><h2>Heading</h2><p>Para content here to be extracted.</p>{PADDING}</article>"
+    );
     let result = extract(&html);
     match result {
         Ok(result) => {
@@ -24,7 +34,9 @@ fn extract_returns_content_html_with_block_structure() {
 
 #[test]
 fn extract_preserves_inline_formatting_in_content_html() {
-    let html = format!(r#"<article><p>Text <strong>bold</strong> <em>italic</em> <a href="https://example.com">link</a></p>{PADDING}</article>"#);
+    let html = format!(
+        r#"<article><p>Text <strong>bold</strong> <em>italic</em> <a href="https://example.com">link</a></p>{PADDING}</article>"#
+    );
     let result = extract(&html);
     match result {
         Ok(result) => {
@@ -81,7 +93,8 @@ fn extract_content_html_is_well_formed_and_escapes_special_chars() {
 
 #[test]
 fn extract_preserves_ordered_list_structure() {
-    let html = format!("<article><ol><li>First</li><li>Second</li><li>Third</li></ol>{PADDING}</article>");
+    let html =
+        format!("<article><ol><li>First</li><li>Second</li><li>Third</li></ol>{PADDING}</article>");
     let result = extract(&html);
     match result {
         Ok(result) => {

@@ -1,10 +1,19 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::extract;
 
 const PADDING: &str = "<p>Additional paragraph to ensure sufficient content for the extraction algorithm to consider this a real article.</p><p>Second padding paragraph with more text to satisfy the minimum content scoring threshold for table extraction.</p>";
 
 #[test]
 fn extract_formats_simple_tables_in_content_text_and_preserves_in_content_html() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <article>
             <p>Intro text for the article with enough content.</p>
             {PADDING}
@@ -13,7 +22,8 @@ fn extract_formats_simple_tables_in_content_text_and_preserves_in_content_html()
                 <tr><td>A</td><td>B</td></tr>
             </table>
         </article>
-    "#);
+    "#
+    );
 
     let result = extract(&html);
     match result {
@@ -63,7 +73,8 @@ fn extract_treats_layout_tables_as_regular_content() {
 
 #[test]
 fn extract_handles_colspan_and_rowspan_in_table_text() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <article>
             {PADDING}
             <table>
@@ -73,7 +84,8 @@ fn extract_handles_colspan_and_rowspan_in_table_text() {
                 <tr><td>B2</td></tr>
             </table>
         </article>
-    "#);
+    "#
+    );
 
     let result = extract(&html);
     match result {
@@ -118,7 +130,8 @@ fn extract_handles_large_tables_without_panic() {
 
 #[test]
 fn extract_treats_single_row_table_as_layout() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <article>
             {PADDING}
             <table>
@@ -126,7 +139,8 @@ fn extract_treats_single_row_table_as_layout() {
             </table>
             <p>BODY_TEXT</p>
         </article>
-    "#);
+    "#
+    );
 
     let result = extract(&html);
     match result {

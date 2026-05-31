@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::{extract, extract_with_options, Options};
 
 /// Sufficient comment text to pass the minimum comment word count threshold (>= 10 words)
@@ -36,14 +44,16 @@ fn extract_excludes_comments_by_default() {
 #[test]
 fn extract_includes_comments_when_option_enabled() {
     // Comments need >= 10 words and a recognized comment container
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html><body>
             <article>{ARTICLE_CONTENT}</article>
             <section class="comments">
                 {COMMENTS_CONTENT}
             </section>
         </body></html>
-    "#);
+    "#
+    );
 
     let options = Options {
         include_comments: true,
@@ -55,7 +65,11 @@ fn extract_includes_comments_when_option_enabled() {
         Ok(result) => {
             assert!(result.content_text.contains("Main article content"));
             // Comments should be populated (class="comments" is recognized, >= 10 words)
-            assert!(result.comments_text.is_some(), "comments_text should be Some - found: {:?}", result.comments_text);
+            assert!(
+                result.comments_text.is_some(),
+                "comments_text should be Some - found: {:?}",
+                result.comments_text
+            );
             let comments_text = result.comments_text.unwrap();
             assert!(comments_text.contains("First comment"));
         }
@@ -65,12 +79,14 @@ fn extract_includes_comments_when_option_enabled() {
 
 #[test]
 fn extract_detects_disqus_container_as_comments() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html><body>
             <article>{ARTICLE_CONTENT}</article>
             <div id="disqus_thread">{COMMENTS_CONTENT}</div>
         </body></html>
-    "#);
+    "#
+    );
 
     let options = Options {
         include_comments: true,
@@ -81,7 +97,10 @@ fn extract_detects_disqus_container_as_comments() {
     match result {
         Ok(result) => {
             // Comments should be detected from disqus_thread
-            assert!(result.comments_text.is_some(), "disqus comments should be detected");
+            assert!(
+                result.comments_text.is_some(),
+                "disqus comments should be detected"
+            );
             let comments_text = result.comments_text.unwrap();
             assert!(comments_text.contains("First comment"));
         }
@@ -110,12 +129,14 @@ fn extract_returns_none_when_no_comments_found() {
 
 #[test]
 fn extract_detects_fb_comments_container() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html><body>
             <article>{ARTICLE_CONTENT}</article>
             <div class="fb-comments">{COMMENTS_CONTENT}</div>
         </body></html>
-    "#);
+    "#
+    );
 
     let options = Options {
         include_comments: true,
@@ -126,7 +147,10 @@ fn extract_detects_fb_comments_container() {
     match result {
         Ok(result) => {
             // fb-comments class should be detected as comment section
-            assert!(result.comments_text.is_some(), "fb-comments should be detected");
+            assert!(
+                result.comments_text.is_some(),
+                "fb-comments should be detected"
+            );
             let comments_text = result.comments_text.unwrap();
             assert!(comments_text.contains("First comment"));
         }
@@ -136,12 +160,14 @@ fn extract_detects_fb_comments_container() {
 
 #[test]
 fn extract_detects_respond_id_as_comment_section() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html><body>
             <article>{ARTICLE_CONTENT}</article>
             <div id="respond">{COMMENTS_CONTENT}</div>
         </body></html>
-    "#);
+    "#
+    );
 
     let options = Options {
         include_comments: true,
@@ -152,7 +178,10 @@ fn extract_detects_respond_id_as_comment_section() {
     match result {
         Ok(result) => {
             // id="respond" should be detected as comment section
-            assert!(result.comments_text.is_some(), "respond section should be detected");
+            assert!(
+                result.comments_text.is_some(),
+                "respond section should be detected"
+            );
             let comments_text = result.comments_text.unwrap();
             assert!(comments_text.contains("First comment"));
         }
@@ -162,12 +191,14 @@ fn extract_detects_respond_id_as_comment_section() {
 
 #[test]
 fn extract_detects_comment_list_class_via_regex_fallback() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html><body>
             <article>{ARTICLE_CONTENT}</article>
             <div class="post-comment-list">{COMMENTS_CONTENT}</div>
         </body></html>
-    "#);
+    "#
+    );
 
     let options = Options {
         include_comments: true,
@@ -178,7 +209,10 @@ fn extract_detects_comment_list_class_via_regex_fallback() {
     match result {
         Ok(result) => {
             // post-comment-list class should match COMMENT_CLASS regex
-            assert!(result.comments_text.is_some(), "comment-list should be detected via regex");
+            assert!(
+                result.comments_text.is_some(),
+                "comment-list should be detected via regex"
+            );
             let comments_text = result.comments_text.unwrap();
             assert!(comments_text.contains("First comment"));
         }

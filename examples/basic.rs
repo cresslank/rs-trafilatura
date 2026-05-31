@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 //! Basic usage example for rs-trafilatura.
 //!
 //! Run with: `cargo run --example basic`

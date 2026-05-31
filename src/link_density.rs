@@ -3,9 +3,9 @@
 //! This module ports link density testing from go-trafilatura's html-processing.go.
 //! It checks whether sections should be removed because they're rich in links (probably boilerplate).
 
-use dom_query::Selection;
 use crate::dom;
 use crate::Options;
+use dom_query::Selection;
 
 /// Result of link density test
 pub struct LinkDensityResult {
@@ -85,7 +85,9 @@ pub fn link_density_test(element: &Selection, options: &Options) -> bool {
     }
 
     // Get tag name for limit calculation
-    let tag_name = dom::tag_name(element).unwrap_or_default().to_ascii_lowercase();
+    let tag_name = dom::tag_name(element)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
 
     // Check if element has a next sibling
     let has_next_sibling = element
@@ -96,8 +98,16 @@ pub fn link_density_test(element: &Selection, options: &Options) -> bool {
 
     // Prepare limit based on tag and sibling presence
     let limit_length: usize = if tag_name == "p" {
-        if has_next_sibling { 30 } else { 60 }
-    } else if has_next_sibling { 100 } else { 300 };
+        if has_next_sibling {
+            30
+        } else {
+            60
+        }
+    } else if has_next_sibling {
+        100
+    } else {
+        300
+    };
 
     // Check if text of this node is within limit
     if text_length < limit_length {
@@ -115,9 +125,7 @@ pub fn link_density_test(element: &Selection, options: &Options) -> bool {
         }
 
         // More than 80% of links are short (< 10 chars) - typical of nav menus
-        if n_non_empty_links > 1
-            && (n_short_links as f64) / (n_non_empty_links as f64) > 0.8
-        {
+        if n_non_empty_links > 1 && (n_short_links as f64) / (n_non_empty_links as f64) > 0.8 {
             return true;
         }
     }
@@ -188,7 +196,9 @@ pub fn link_density_test_with_info(element: &Selection, options: &Options) -> (b
     }
 
     // Get tag name for limit calculation
-    let tag_name = dom::tag_name(element).unwrap_or_default().to_ascii_lowercase();
+    let tag_name = dom::tag_name(element)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
 
     // Check if element has a next sibling
     let has_next_sibling = element
@@ -199,8 +209,16 @@ pub fn link_density_test_with_info(element: &Selection, options: &Options) -> (b
 
     // Prepare limit based on tag and sibling presence
     let limit_length: usize = if tag_name == "p" {
-        if has_next_sibling { 30 } else { 60 }
-    } else if has_next_sibling { 100 } else { 300 };
+        if has_next_sibling {
+            30
+        } else {
+            60
+        }
+    } else if has_next_sibling {
+        100
+    } else {
+        300
+    };
 
     // Check if text of this node is within limit
     if text_length < limit_length {
@@ -218,9 +236,7 @@ pub fn link_density_test_with_info(element: &Selection, options: &Options) -> (b
         }
 
         // More than 80% of links are short (< 10 chars) - typical of nav menus
-        if n_non_empty_links > 1
-            && (n_short_links as f64) / (n_non_empty_links as f64) > 0.8
-        {
+        if n_non_empty_links > 1 && (n_short_links as f64) / (n_non_empty_links as f64) > 0.8 {
             return (true, true);
         }
 
@@ -357,8 +373,11 @@ mod tests {
         let options = Options::default();
 
         // Verify we have enough text (>200 chars)
-        assert!(text_len > 200, "Table text length {text_len} should be > 200");
-        
+        assert!(
+            text_len > 200,
+            "Table text length {text_len} should be > 200"
+        );
+
         // Table with mostly links should be flagged (text > 200 chars, link ratio > 80%)
         assert!(link_density_test_tables(&table, &options));
     }

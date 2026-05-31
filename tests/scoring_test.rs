@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::extract;
 
 #[test]
@@ -101,8 +109,11 @@ fn extract_rewards_sentence_rich_regions() {
     match result {
         Ok(result) => {
             // Both markers should be extracted (large content from both divs)
-            assert!(result.content_text.contains("SENTENCE_RICH_MARKER") || result.content_text.contains("WORDY_MARKER"),
-                "at least one substantial content region should be extracted");
+            assert!(
+                result.content_text.contains("SENTENCE_RICH_MARKER")
+                    || result.content_text.contains("WORDY_MARKER"),
+                "at least one substantial content region should be extracted"
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
@@ -137,8 +148,11 @@ fn extract_rewards_heading_proximity() {
     match result {
         Ok(result) => {
             // Both regions are substantial; extraction includes at least one
-            assert!(result.content_text.contains("PLAIN_MARKER") || result.content_text.contains("PLAINWORD"),
-                "substantial content should be extracted");
+            assert!(
+                result.content_text.contains("PLAIN_MARKER")
+                    || result.content_text.contains("PLAINWORD"),
+                "substantial content should be extracted"
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
@@ -173,8 +187,11 @@ fn extract_prefers_substantive_paragraphs() {
     match result {
         Ok(result) => {
             // At least one of the content regions is extracted
-            assert!(result.content_text.contains("LONG_REGION_MARKER") || result.content_text.contains("SHORT_REGION_MARKER"),
-                "at least one content region should be extracted");
+            assert!(
+                result.content_text.contains("LONG_REGION_MARKER")
+                    || result.content_text.contains("SHORT_REGION_MARKER"),
+                "at least one content region should be extracted"
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }

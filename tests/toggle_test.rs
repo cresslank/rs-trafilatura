@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::{extract_with_options, Options};
 
 /// Padding to ensure content extraction threshold is met
@@ -9,7 +17,8 @@ const COMMENT_TEXT: &str = "<p>First comment here with enough words to pass mini
 /// Test AC#1: include_tables: false excludes table content
 #[test]
 fn include_tables_false_excludes_table_content() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html><body>
             <article>
                 <p>Article text before table.</p>
@@ -21,7 +30,8 @@ fn include_tables_false_excludes_table_content() {
                 {PADDING}
             </article>
         </body></html>
-    "#);
+    "#
+    );
 
     let options = Options {
         include_tables: false,
@@ -49,7 +59,8 @@ fn include_tables_false_excludes_table_content() {
 /// Test AC#2: include_tables: true (default) includes table content
 #[test]
 fn include_tables_true_includes_table_content() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html><body>
             <article>
                 <p>Article text before table.</p>
@@ -61,7 +72,8 @@ fn include_tables_true_includes_table_content() {
                 <p>Article text after table.</p>
             </article>
         </body></html>
-    "#);
+    "#
+    );
 
     // Test with explicit true
     let options = Options {
@@ -82,7 +94,8 @@ fn include_tables_true_includes_table_content() {
 /// Test that default Options has include_tables: true
 #[test]
 fn default_options_includes_tables() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html><body>
             <article>
                 {PADDING}
@@ -92,7 +105,8 @@ fn default_options_includes_tables() {
                 </table>
             </article>
         </body></html>
-    "#);
+    "#
+    );
 
     // Use default options
     let result = extract_with_options(&html, &Options::default()).expect("extraction failed");
@@ -105,7 +119,8 @@ fn default_options_includes_tables() {
 /// Test AC#3: include_comments: true populates comments fields
 #[test]
 fn include_comments_true_populates_comments_fields() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html><body>
             <article>
                 <p>Main article content here with enough text for extraction algorithm threshold.</p>
@@ -115,7 +130,8 @@ fn include_comments_true_populates_comments_fields() {
                 {COMMENT_TEXT}
             </div>
         </body></html>
-    "#);
+    "#
+    );
 
     let options = Options {
         include_comments: true,
@@ -128,7 +144,10 @@ fn include_comments_true_populates_comments_fields() {
     assert!(result.content_text.contains("Main article content"));
 
     // Comments should be populated (need >= 10 words to pass minimum threshold)
-    assert!(result.comments_text.is_some(), "comments_text should be Some");
+    assert!(
+        result.comments_text.is_some(),
+        "comments_text should be Some"
+    );
     let comments = result.comments_text.unwrap();
     assert!(comments.contains("First comment"));
     assert!(comments.contains("Second comment"));
@@ -222,7 +241,8 @@ fn both_toggles_disabled() {
 /// Test combined toggles: both enabled
 #[test]
 fn both_toggles_enabled() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html><body>
             <article>
                 <p>Article content here with enough text for extraction.</p>
@@ -236,7 +256,8 @@ fn both_toggles_enabled() {
                 {COMMENT_TEXT}
             </div>
         </body></html>
-    "#);
+    "#
+    );
 
     let options = Options {
         include_tables: true,
@@ -253,14 +274,18 @@ fn both_toggles_enabled() {
     assert!(result.content_text.contains("Table header | Second column"));
 
     // Should have comments (need >= 10 words)
-    assert!(result.comments_text.is_some(), "comments_text should be Some");
+    assert!(
+        result.comments_text.is_some(),
+        "comments_text should be Some"
+    );
     assert!(result.comments_text.unwrap().contains("First comment"));
 }
 
 /// Test that table toggle doesn't affect non-table content
 #[test]
 fn table_toggle_doesnt_affect_other_content() {
-    let html = format!(r#"
+    let html = format!(
+        r#"
         <html><body>
             <article>
                 <p>Paragraph one content here.</p>
@@ -269,23 +294,34 @@ fn table_toggle_doesnt_affect_other_content() {
                 {PADDING}
             </article>
         </body></html>
-    "#);
+    "#
+    );
 
-    let with_tables = extract_with_options(&html, &Options {
-        include_tables: true,
-        ..Options::default()
-    }).expect("extraction failed");
+    let with_tables = extract_with_options(
+        &html,
+        &Options {
+            include_tables: true,
+            ..Options::default()
+        },
+    )
+    .expect("extraction failed");
 
-    let without_tables = extract_with_options(&html, &Options {
-        include_tables: false,
-        ..Options::default()
-    }).expect("extraction failed");
+    let without_tables = extract_with_options(
+        &html,
+        &Options {
+            include_tables: false,
+            ..Options::default()
+        },
+    )
+    .expect("extraction failed");
 
     // Both should extract the same non-table content
     assert!(with_tables.content_text.contains("Paragraph one content"));
     assert!(with_tables.content_text.contains("List item content"));
 
-    assert!(without_tables.content_text.contains("Paragraph one content"));
+    assert!(without_tables
+        .content_text
+        .contains("Paragraph one content"));
     assert!(without_tables.content_text.contains("List item content"));
 }
 
@@ -303,19 +339,29 @@ fn comment_toggle_doesnt_affect_main_content() {
         </body></html>
     "#;
 
-    let with_comments = extract_with_options(html, &Options {
-        include_comments: true,
-        ..Options::default()
-    }).expect("extraction failed");
+    let with_comments = extract_with_options(
+        html,
+        &Options {
+            include_comments: true,
+            ..Options::default()
+        },
+    )
+    .expect("extraction failed");
 
-    let without_comments = extract_with_options(html, &Options {
-        include_comments: false,
-        ..Options::default()
-    }).expect("extraction failed");
+    let without_comments = extract_with_options(
+        html,
+        &Options {
+            include_comments: false,
+            ..Options::default()
+        },
+    )
+    .expect("extraction failed");
 
     // Both should extract the same main content
     assert!(with_comments.content_text.contains("Main article content"));
-    assert!(without_comments.content_text.contains("Main article content"));
+    assert!(without_comments
+        .content_text
+        .contains("Main article content"));
 
     // Content text should be identical
     assert_eq!(with_comments.content_text, without_comments.content_text);

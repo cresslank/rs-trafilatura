@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::{extract, extract_with_options, Options};
 
 /// Test that recall mode uses lower threshold and accepts more content
@@ -62,7 +70,8 @@ fn recall_mode_includes_borderline_content() {
         favor_recall: true,
         ..Options::default()
     };
-    let result = extract_with_options(html, &recall_options).expect("recall should accept borderline content");
+    let result = extract_with_options(html, &recall_options)
+        .expect("recall should accept borderline content");
 
     // Paragraph text is extracted; heading may or may not be present
     assert!(result.content_text.contains("Short paragraph one"));
@@ -85,12 +94,14 @@ fn recall_mode_extracts_more_or_equal_content() {
         </body></html>
     "#;
 
-    let default_result = extract_with_options(html, &Options::default()).expect("default extraction failed");
+    let default_result =
+        extract_with_options(html, &Options::default()).expect("default extraction failed");
     let recall_options = Options {
         favor_recall: true,
         ..Options::default()
     };
-    let recall_result = extract_with_options(html, &recall_options).expect("recall extraction failed");
+    let recall_result =
+        extract_with_options(html, &recall_options).expect("recall extraction failed");
 
     // Recall should extract at least as much content as default
     assert!(
@@ -100,7 +111,9 @@ fn recall_mode_extracts_more_or_equal_content() {
 
     // Verify main content is included
     assert!(
-        recall_result.content_text.contains("Main content paragraph"),
+        recall_result
+            .content_text
+            .contains("Main content paragraph"),
         "recall should include main content"
     );
 }
@@ -150,7 +163,8 @@ fn recall_mode_extracts_from_multiple_small_paragraphs() {
         favor_recall: true,
         ..Options::default()
     };
-    let result = extract_with_options(html, &recall_options).expect("recall should handle scattered content");
+    let result = extract_with_options(html, &recall_options)
+        .expect("recall should handle scattered content");
 
     // Should extract all the pieces
     assert!(result.content_text.contains("First piece"));
@@ -215,7 +229,8 @@ fn recall_mode_accepts_high_quality_content() {
         favor_recall: true,
         ..Options::default()
     };
-    let result = extract_with_options(html, &recall_options).expect("recall should accept high-quality content");
+    let result = extract_with_options(html, &recall_options)
+        .expect("recall should accept high-quality content");
 
     // Paragraph content is extracted (headings may or may not appear in content_text)
     assert!(result.content_text.contains("substantial content"));
@@ -235,15 +250,21 @@ fn recall_is_more_inclusive_than_precision() {
         </body></html>
     "#;
 
-    let precision_result = extract_with_options(html, &Options {
-        favor_precision: true,
-        ..Options::default()
-    });
+    let precision_result = extract_with_options(
+        html,
+        &Options {
+            favor_precision: true,
+            ..Options::default()
+        },
+    );
 
-    let recall_result = extract_with_options(html, &Options {
-        favor_recall: true,
-        ..Options::default()
-    });
+    let recall_result = extract_with_options(
+        html,
+        &Options {
+            favor_recall: true,
+            ..Options::default()
+        },
+    );
 
     // Both modes should not panic; either may succeed or reject marginal content
     // Current behavior: both typically accept this content
@@ -300,7 +321,9 @@ fn recall_mode_combines_content_from_multiple_regions() {
 
     // All three content regions should be included
     assert!(
-        recall_result.content_text.contains("Introduction paragraph"),
+        recall_result
+            .content_text
+            .contains("Introduction paragraph"),
         "should include first content region"
     );
     assert!(
@@ -323,8 +346,11 @@ fn recall_mode_combines_content_from_multiple_regions() {
     );
 
     // Verify default mode also works (behavior should be consistent)
-    let default_result = extract(html).expect("default mode should also extract multi-region content");
-    assert!(default_result.content_text.contains("Introduction paragraph"));
+    let default_result =
+        extract(html).expect("default mode should also extract multi-region content");
+    assert!(default_result
+        .content_text
+        .contains("Introduction paragraph"));
     assert!(default_result.content_text.contains("Main body paragraph"));
     assert!(default_result.content_text.contains("Conclusion paragraph"));
 }

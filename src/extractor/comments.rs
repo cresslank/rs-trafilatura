@@ -3,14 +3,14 @@
 //! This module ports comment extraction from go-trafilatura's main-extractor.go.
 //! It extracts user comments from web pages when `include_comments` is enabled.
 
-use dom_query::{Document, Selection};
+use super::pruning::prune_unwanted_nodes;
+use super::state::ExtractionState;
 use crate::dom;
 use crate::etree;
 use crate::html_processing::handle_text_node;
 use crate::selector;
 use crate::Options;
-use super::pruning::prune_unwanted_nodes;
-use super::state::ExtractionState;
+use dom_query::{Document, Selection};
 
 /// Process and determine how to deal with comment's content.
 ///
@@ -47,10 +47,7 @@ fn process_comments_node<'a>(
 /// # Returns
 /// * `(comments_body, comments_text)` - The extracted comments body and plain text
 #[must_use]
-pub fn extract_comments(
-    doc: &Document,
-    opts: &Options,
-) -> (Option<Document>, String) {
+pub fn extract_comments(doc: &Document, opts: &Options) -> (Option<Document>, String) {
     // Prepare final container
     let comments_body_doc = etree::element("body");
     let comments_body = comments_body_doc.select("body");
@@ -61,14 +58,12 @@ pub fn extract_comments(
     // Process each selector rule
     for rule in selector::comments::COMMENTS {
         // Capture first node that matched with the rule
-        let Some(sub_tree) = selector::query(&doc.select("body"), *rule) else { continue };
+        let Some(sub_tree) = selector::query(&doc.select("body"), *rule) else {
+            continue;
+        };
 
         // Prune discarded comment elements
-        let _ = prune_unwanted_nodes(
-            &sub_tree,
-            selector::comments::DISCARDED_COMMENTS,
-            false,
-        );
+        let _ = prune_unwanted_nodes(&sub_tree, selector::comments::DISCARDED_COMMENTS, false);
 
         // Strip links and spans
         etree::strip_tags(&sub_tree, &["a", "span"]);
@@ -164,7 +159,10 @@ mod tests {
         </html>"#;
 
         let doc = Document::from(html);
-        let opts = Options { include_comments: true, ..Options::default() };
+        let opts = Options {
+            include_comments: true,
+            ..Options::default()
+        };
 
         let (comments_body, text) = extract_comments(&doc, &opts);
 
@@ -183,7 +181,10 @@ mod tests {
         </html>"#;
 
         let doc = Document::from(html);
-        let opts = Options { include_comments: true, ..Options::default() };
+        let opts = Options {
+            include_comments: true,
+            ..Options::default()
+        };
 
         let (comments_body, text) = extract_comments(&doc, &opts);
 
@@ -204,7 +205,10 @@ mod tests {
         </html>"##;
 
         let doc = Document::from(html);
-        let opts = Options { include_comments: true, ..Options::default() };
+        let opts = Options {
+            include_comments: true,
+            ..Options::default()
+        };
 
         let (comments_body, _) = extract_comments(&doc, &opts);
 
@@ -228,7 +232,10 @@ mod tests {
         </html>"#;
 
         let doc = Document::from(html);
-        let opts = Options { include_comments: true, ..Options::default() };
+        let opts = Options {
+            include_comments: true,
+            ..Options::default()
+        };
 
         let _ = extract_comments(&doc, &opts);
 
@@ -249,7 +256,10 @@ mod tests {
         </html>"#;
 
         let doc = Document::from(html);
-        let opts = Options { include_comments: true, ..Options::default() };
+        let opts = Options {
+            include_comments: true,
+            ..Options::default()
+        };
 
         let (comments_body, text) = extract_comments(&doc, &opts);
 

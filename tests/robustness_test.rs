@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::{extract, Error};
 use std::time::{Duration, Instant};
 
@@ -93,7 +101,10 @@ fn extract_handles_large_html_without_panic() {
     let elapsed = start.elapsed();
 
     assert!(matches!(result, Ok(_) | Err(Error::NoContent)));
-    assert!(elapsed < Duration::from_secs(60), "large HTML parsing took {elapsed:?}");
+    assert!(
+        elapsed < Duration::from_secs(60),
+        "large HTML parsing took {elapsed:?}"
+    );
 }
 
 #[test]

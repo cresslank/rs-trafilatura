@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::extract;
 
 #[test]
@@ -18,15 +26,21 @@ fn subtitle_extracted_from_h1_following_paragraph() {
     match result {
         Ok(result) => {
             let content = result.content_text;
-            assert!(content.contains("This is the subtitle that should be extracted"),
-                "Content should contain subtitle: {content:?}");
-            assert!(content.contains("This is the main content paragraph"),
-                "Content should contain main content");
+            assert!(
+                content.contains("This is the subtitle that should be extracted"),
+                "Content should contain subtitle: {content:?}"
+            );
+            assert!(
+                content.contains("This is the main content paragraph"),
+                "Content should contain main content"
+            );
             // Subtitle should appear before main content
             let subtitle_pos = content.find("This is the subtitle");
             let main_content_pos = content.find("This is the main content");
-            assert!(subtitle_pos < main_content_pos,
-                "Subtitle should appear before main content");
+            assert!(
+                subtitle_pos < main_content_pos,
+                "Subtitle should appear before main content"
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
@@ -51,10 +65,14 @@ fn subtitle_extracted_from_nytimes_style_deck() {
     match result {
         Ok(result) => {
             let content = result.content_text;
-            assert!(content.contains("How much protein do you need?"),
-                "Content should contain subtitle: {content:?}");
-            assert!(content.contains("least bad") || content.contains("tackled these questions"),
-                "Content should contain deck/subtitle text");
+            assert!(
+                content.contains("How much protein do you need?"),
+                "Content should contain subtitle: {content:?}"
+            );
+            assert!(
+                content.contains("least bad") || content.contains("tackled these questions"),
+                "Content should contain deck/subtitle text"
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
@@ -82,8 +100,12 @@ fn subtitle_with_common_selectors() {
         Ok(result) => {
             let content = result.content_text;
             // Should extract at least one of the subtitle/deck/excerpt elements
-            assert!(content.contains("subtitle") || content.contains("deck") || content.contains("excerpt"),
-                "Content should contain subtitle-like text: {content:?}");
+            assert!(
+                content.contains("subtitle")
+                    || content.contains("deck")
+                    || content.contains("excerpt"),
+                "Content should contain subtitle-like text: {content:?}"
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
@@ -107,8 +129,10 @@ fn no_subtitle_when_not_present() {
     match result {
         Ok(result) => {
             let content = result.content_text;
-            assert!(content.contains("Just regular content without a subtitle"),
-                "Content should contain main text even without subtitle: {content:?}");
+            assert!(
+                content.contains("Just regular content without a subtitle"),
+                "Content should contain main text even without subtitle: {content:?}"
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
@@ -136,8 +160,10 @@ fn subtitle_prepended_to_content() {
             let content = result.content_text;
             // Subtitle should be first or near first
             let first_100_chars = &content[..content.len().min(100)];
-            assert!(first_100_chars.contains("Subtitle"),
-                "Subtitle should be near the beginning: {first_100_chars:?}");
+            assert!(
+                first_100_chars.contains("Subtitle"),
+                "Subtitle should be near the beginning: {first_100_chars:?}"
+            );
         }
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }

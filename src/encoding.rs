@@ -164,7 +164,8 @@ mod tests {
     #[test]
     fn transcode_windows1252_to_utf8() {
         // Windows-1252 encoded HTML with smart quote (" = 0x93)
-        let html = b"<html><head><meta charset=\"windows-1252\"></head><body>\x93Hello\x94</body></html>";
+        let html =
+            b"<html><head><meta charset=\"windows-1252\"></head><body>\x93Hello\x94</body></html>";
         let result = transcode_to_utf8(html);
         // Windows-1252 0x93/0x94 are left/right double quotes
         assert!(result.contains("\u{201C}Hello\u{201D}"));

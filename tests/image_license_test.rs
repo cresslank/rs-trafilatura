@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 use rs_trafilatura::extract;
 
 #[test]
@@ -13,7 +21,10 @@ fn image_from_og_image() {
 
     let result = extract(html);
     match result {
-        Ok(result) => assert_eq!(result.metadata.image.as_deref(), Some("https://example.com/og.png")),
+        Ok(result) => assert_eq!(
+            result.metadata.image.as_deref(),
+            Some("https://example.com/og.png")
+        ),
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
 }
@@ -50,7 +61,10 @@ fn image_falls_back_to_twitter_image_name() {
 
     let result = extract(html);
     match result {
-        Ok(result) => assert_eq!(result.metadata.image.as_deref(), Some("https://example.com/tw.png")),
+        Ok(result) => assert_eq!(
+            result.metadata.image.as_deref(),
+            Some("https://example.com/tw.png")
+        ),
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
 }
@@ -68,7 +82,10 @@ fn image_falls_back_to_twitter_image_property() {
 
     let result = extract(html);
     match result {
-        Ok(result) => assert_eq!(result.metadata.image.as_deref(), Some("https://example.com/twprop.png")),
+        Ok(result) => assert_eq!(
+            result.metadata.image.as_deref(),
+            Some("https://example.com/twprop.png")
+        ),
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
 }
@@ -109,7 +126,10 @@ fn license_from_anchor_rel_license() {
 
     let result = extract(html);
     match result {
-        Ok(result) => assert_eq!(result.metadata.license.as_deref(), Some("https://example.com/license")),
+        Ok(result) => assert_eq!(
+            result.metadata.license.as_deref(),
+            Some("https://example.com/license")
+        ),
         Err(err) => panic!("expected Ok(_), got Err({err:?})"),
     }
 }

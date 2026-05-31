@@ -5,10 +5,11 @@
 //! Usage: batch_markdown <input_dir> <output_dir>
 
 use rs_trafilatura::{extract_with_options, Options};
+use std::fmt::Write as _;
 use std::fs;
 use std::path::PathBuf;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 3 {
         eprintln!("Usage: batch_markdown <input_dir> <output_dir>");
@@ -23,7 +24,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    fs::create_dir_all(&output_dir).expect("Failed to create output directory");
+    fs::create_dir_all(&output_dir)?;
 
     let options = Options {
         output_markdown: true,
@@ -33,18 +34,12 @@ fn main() {
         ..Options::default()
     };
 
-    let mut entries: Vec<_> = fs::read_dir(&input_dir)
-        .expect("Failed to read input directory")
-        .filter_map(|e| e.ok())
-        .filter(|e| {
-            e.path()
-                .extension()
-                .map(|ext| ext == "html")
-                .unwrap_or(false)
-        })
+    let mut entries: Vec<_> = fs::read_dir(&input_dir)?
+        .filter_map(std::result::Result::ok)
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "html"))
         .collect();
 
-    entries.sort_by_key(|e| e.file_name());
+    entries.sort_by_key(std::fs::DirEntry::file_name);
 
     let total = entries.len();
     let mut success = 0;
@@ -53,8 +48,17 @@ fn main() {
 
     for (i, entry) in entries.iter().enumerate() {
         let path = entry.path();
-        let stem = path.file_stem().unwrap().to_string_lossy();
-        let out_path = output_dir.join(format!("{}.md", stem));
+        let Some(stem) = path.file_stem().map(|stem| stem.to_string_lossy()) else {
+            eprintln!(
+                "[{}/{}] ERROR skipping path without file stem: {}",
+                i + 1,
+                total,
+                path.display()
+            );
+            failed += 1;
+            continue;
+        };
+        let out_path = output_dir.join(format!("{stem}.md"));
 
         let html = match fs::read_to_string(&path) {
             Ok(h) => h,
@@ -68,9 +72,7 @@ fn main() {
         match extract_with_options(&html, &options) {
             Ok(result) => {
                 // Prefer markdown, fall back to plain text
-                let content = result
-                    .content_markdown
-                    .unwrap_or(result.content_text);
+                let content = result.content_markdown.unwrap_or(result.content_text);
 
                 if content.trim().is_empty() {
                     eprintln!(
@@ -88,23 +90,27 @@ fn main() {
                 let mut md = String::new();
                 md.push_str("---\n");
                 if let Some(ref title) = result.metadata.title {
-                    md.push_str(&format!("title: \"{}\"\n", title.replace('"', "\\\"")));
+                    writeln!(md, "title: \"{}\"", title.replace('"', "\\\""))?;
                 }
                 if let Some(ref author) = result.metadata.author {
-                    md.push_str(&format!("author: \"{}\"\n", author.replace('"', "\\\"")));
+                    writeln!(md, "author: \"{}\"", author.replace('"', "\\\""))?;
                 }
                 if let Some(ref date) = result.metadata.date {
-                    md.push_str(&format!("date: \"{}\"\n", date.to_rfc3339()));
+                    writeln!(md, "date: \"{}\"", date.to_rfc3339())?;
                 }
-                md.push_str(&format!("source_file: \"{}\"\n", path.file_name().unwrap().to_string_lossy()));
-                md.push_str(&format!("confidence: {:.2}\n", result.extraction_quality));
+                let source_file = path.file_name().map_or_else(
+                    || path.as_os_str().to_string_lossy(),
+                    |name| name.to_string_lossy(),
+                );
+                writeln!(md, "source_file: \"{source_file}\"")?;
+                writeln!(md, "confidence: {:.2}", result.extraction_quality)?;
                 if let Some(ref pt) = result.metadata.page_type {
-                    md.push_str(&format!("page_type: \"{}\"\n", pt));
+                    writeln!(md, "page_type: \"{pt}\"")?;
                 }
                 md.push_str("---\n\n");
                 md.push_str(&content);
 
-                fs::write(&out_path, &md).expect("Failed to write markdown file");
+                fs::write(&out_path, &md)?;
                 println!(
                     "[{}/{}] OK: {}.md ({} chars, confidence: {:.2})",
                     i + 1,
@@ -122,8 +128,7 @@ fn main() {
         }
     }
 
-    println!(
-        "\nDone: {} success, {} empty, {} failed (of {} total)",
-        success, empty, failed, total
-    );
+    println!("\nDone: {success} success, {empty} empty, {failed} failed (of {total} total)");
+
+    Ok(())
 }

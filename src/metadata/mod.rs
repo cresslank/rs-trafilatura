@@ -7,18 +7,10 @@ pub mod dom_extraction;
 pub mod json_ld;
 pub mod meta_tags;
 
-use dom_query::Document;
 use crate::result::Metadata;
 use crate::url_utils;
 use crate::Options;
-
-pub use dom_extraction::{
-    examine_title_element, extract_dom_author, extract_dom_categories,
-    extract_dom_license, extract_dom_sitename, extract_dom_tags,
-    extract_dom_title, extract_dom_url,
-};
-pub use json_ld::extract_json_ld;
-pub use meta_tags::{examine_meta, extract_open_graph, validate_metadata_name};
+use dom_query::Document;
 
 /// Extract all metadata from a document.
 ///
@@ -94,8 +86,8 @@ fn decode_html_entities(text: &str) -> String {
         .replace("&#8216;", "\u{2018}") // left single quote
         .replace("&#8220;", "\u{201c}") // left double quote
         .replace("&#8221;", "\u{201d}") // right double quote
-        .replace("&bull;", "\u{2022}")  // bullet
-        .replace("&#187;", "\u{00bb}")  // »
+        .replace("&bull;", "\u{2022}") // bullet
+        .replace("&#187;", "\u{00bb}") // »
         .replace("&raquo;", "\u{00bb}") // »
         .replace("&ndash;", "\u{2013}") // en dash
         .replace("&mdash;", "\u{2014}") // em dash
@@ -111,7 +103,14 @@ fn decode_html_entities(text: &str) -> String {
 /// used to confirm the suffix is indeed a site name.
 fn strip_site_suffix(title: &str, sitename: Option<&str>) -> String {
     // Separators to check — ordered by specificity
-    let separators: &[&str] = &[" | ", " \u{2022} ", " \u{00bb} ", " - ", " \u{2013} ", " \u{2014} "];
+    let separators: &[&str] = &[
+        " | ",
+        " \u{2022} ",
+        " \u{00bb} ",
+        " - ",
+        " \u{2013} ",
+        " \u{2014} ",
+    ];
 
     for sep in separators {
         // Try all split points for this separator (handles chained suffixes)
@@ -185,13 +184,15 @@ fn post_process_metadata(mut metadata: Metadata, _opts: &Options) -> Metadata {
     }
 
     // Clean categories and tags
-    metadata.categories = metadata.categories
+    metadata.categories = metadata
+        .categories
         .into_iter()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
         .collect();
 
-    metadata.tags = metadata.tags
+    metadata.tags = metadata
+        .tags
         .into_iter()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
@@ -311,7 +312,10 @@ mod tests {
         let doc = Document::from(html);
         let metadata = extract_metadata(&doc, &opts);
 
-        assert_eq!(metadata.url, Some("https://example.com/article".to_string()));
+        assert_eq!(
+            metadata.url,
+            Some("https://example.com/article".to_string())
+        );
         assert_eq!(metadata.hostname, Some("example.com".to_string()));
     }
 
@@ -338,7 +342,7 @@ mod tests {
     fn test_post_process_trims_fields() {
         let metadata = Metadata {
             title: Some("  Spaced Title  ".to_string()),
-            author: Some(String::new()),  // Empty after trim
+            author: Some(String::new()), // Empty after trim
             categories: vec!["cat1".to_string(), String::new(), "cat2".to_string()],
             ..Metadata::default()
         };
@@ -353,10 +357,7 @@ mod tests {
     #[test]
     fn test_is_blacklisted_author() {
         let opts = Options {
-            author_blacklist: Some(vec![
-                "staff".to_string(),
-                "admin".to_string(),
-            ]),
+            author_blacklist: Some(vec!["staff".to_string(), "admin".to_string()]),
             ..Options::default()
         };
 

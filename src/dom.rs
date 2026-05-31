@@ -296,8 +296,8 @@ pub fn rename(sel: &Selection, new_tag: &str) {
 #[must_use]
 pub fn is_void_element(sel: &Selection) -> bool {
     const VOID_ELEMENTS: &[&str] = &[
-        "area", "base", "br", "col", "embed", "hr", "img", "input",
-        "link", "meta", "param", "source", "track", "wbr",
+        "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param",
+        "source", "track", "wbr",
     ];
 
     tag_name(sel).is_some_and(|t| VOID_ELEMENTS.contains(&t.as_str()))
@@ -535,7 +535,9 @@ mod tests {
         assert_eq!(attrs.len(), 3);
 
         // Check that all expected attributes are present
-        assert!(attrs.iter().any(|(k, v)| k == "href" && v == "http://example.com"));
+        assert!(attrs
+            .iter()
+            .any(|(k, v)| k == "href" && v == "http://example.com"));
         assert!(attrs.iter().any(|(k, v)| k == "class" && v == "link"));
         assert!(attrs.iter().any(|(k, v)| k == "title" && v == "Example"));
     }
@@ -675,7 +677,10 @@ mod tests {
         let cloned = clone_document(&doc);
 
         // Both should have the same content
-        assert_eq!(doc.select("#original").text(), cloned.select("#original").text());
+        assert_eq!(
+            doc.select("#original").text(),
+            cloned.select("#original").text()
+        );
 
         // Modifying clone shouldn't affect original
         cloned.select("#original").set_attr("id", "cloned");

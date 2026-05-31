@@ -19,15 +19,14 @@ use crate::selector::{self, content::CONTENT_RULES};
 use crate::Options;
 
 use super::handlers::{
-    handle_formatting, handle_image, handle_lists, handle_other_elements,
-    handle_paragraphs, handle_quotes, handle_table, handle_titles,
+    handle_formatting, handle_image, handle_lists, handle_other_elements, handle_paragraphs,
+    handle_quotes, handle_table, handle_titles,
 };
 use super::pruning::{prune_unwanted_sections, strip_non_potential_tags};
 use super::state::ExtractionState;
 use super::tags::{
-    is_xml_graphic_tag, is_xml_head_tag, is_xml_hi_tag, is_xml_lb_tag,
-    is_xml_list_tag, is_xml_quote_tag, is_xml_ref_tag,
-    XML_LB_TAGS, XML_LIST_TAGS, XML_QUOTE_TAGS,
+    is_xml_graphic_tag, is_xml_head_tag, is_xml_hi_tag, is_xml_lb_tag, is_xml_list_tag,
+    is_xml_quote_tag, is_xml_ref_tag, XML_LB_TAGS, XML_LIST_TAGS, XML_QUOTE_TAGS,
 };
 
 /// Process text element and determine how to deal with its content.
@@ -204,10 +203,10 @@ pub fn extract_content(doc: &Document, opts: &Options) -> (Document, String) {
             .filter_map(|n| {
                 let sel = Selection::from(*n);
                 let text = dom::text_content(&sel);
-                if !text.trim().is_empty() {
-                    Some(text.to_string())
-                } else {
+                if text.trim().is_empty() {
                     None
+                } else {
+                    Some(text.to_string())
                 }
             })
             .collect();
@@ -500,7 +499,8 @@ mod tests {
 
     #[test]
     fn test_recover_wild_text_finds_paragraphs() {
-        let doc = Document::from("<body><p>Wild paragraph one.</p><p>Wild paragraph two.</p></body>");
+        let doc =
+            Document::from("<body><p>Wild paragraph one.</p><p>Wild paragraph two.</p></body>");
         let result_doc = etree::element("body");
         let result_body = result_doc.select("body");
         let mut state = ExtractionState::new();

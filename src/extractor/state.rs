@@ -3,8 +3,8 @@
 //! This module provides `ExtractionState` to track processed nodes and potential tags.
 //! Replaces Go's `element.Data = "done"` pattern with HashSet-based tracking.
 
-use std::collections::HashSet;
 use dom_query::NodeId;
+use std::collections::HashSet;
 
 /// Tracks extraction state including processed nodes and potential tags.
 ///
@@ -140,8 +140,8 @@ mod tests {
         assert!(state.is_potential_tag("h1"));
         assert!(state.is_potential_tag("blockquote"));
         assert!(!state.is_potential_tag("table")); // not in default
-        assert!(!state.is_potential_tag("img"));   // not in default
-        assert!(!state.is_potential_tag("a"));     // not in default (added with include_links)
+        assert!(!state.is_potential_tag("img")); // not in default
+        assert!(!state.is_potential_tag("a")); // not in default (added with include_links)
     }
 
     #[test]

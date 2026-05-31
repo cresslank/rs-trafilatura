@@ -309,7 +309,8 @@ mod tests {
 
     #[test]
     fn test_get_node_ancestors_finds_all_matching() {
-        let doc = dom::parse(r#"
+        let doc = dom::parse(
+            r#"
             <div>
                 <article>
                     <div>
@@ -317,7 +318,8 @@ mod tests {
                     </div>
                 </article>
             </div>
-        "#);
+        "#,
+        );
         let p = doc.select("#target");
 
         let div_ancestors = get_node_ancestors(&p, "div");
@@ -326,7 +328,8 @@ mod tests {
 
     #[test]
     fn test_get_node_ancestors_preserves_order() {
-        let doc = dom::parse(r#"
+        let doc = dom::parse(
+            r#"
             <div id="outer">
                 <section>
                     <div id="inner">
@@ -334,7 +337,8 @@ mod tests {
                     </div>
                 </section>
             </div>
-        "#);
+        "#,
+        );
         let p = doc.select("#target");
 
         let div_ancestors = get_node_ancestors(&p, "div");
@@ -348,13 +352,15 @@ mod tests {
 
     #[test]
     fn test_get_node_ancestors_empty_when_no_matches() {
-        let doc = dom::parse(r#"
+        let doc = dom::parse(
+            r#"
             <section>
                 <article>
                     <p id="target">content</p>
                 </article>
             </section>
-        "#);
+        "#,
+        );
         let p = doc.select("#target");
 
         let div_ancestors = get_node_ancestors(&p, "div");
@@ -374,13 +380,15 @@ mod tests {
 
     #[test]
     fn test_combined_pattern_matching() {
-        let doc = dom::parse(r#"
+        let doc = dom::parse(
+            r#"
             <div>
                 <article id="main-article" class="post-content">Match 1</article>
                 <div id="sidebar-widget" class="advertisement">No match</div>
                 <section id="related-posts" class="post-list">Match 2</section>
             </div>
-        "#);
+        "#,
+        );
         let root = doc.select("div").first();
 
         // Simulate a typical go-trafilatura selector rule pattern

@@ -78,7 +78,8 @@ pub static BOILERPLATE_CLASS_NO_COMMENTS: LazyLock<Regex> = LazyLock::new(|| {
 
 /// Matches class/id names likely to contain main content.
 pub static CONTENT_CLASS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(article|content|post|entry|story|text|body|main)").expect("CONTENT_CLASS regex")
+    Regex::new(r"(?i)(article|content|post|entry|story|text|body|main)")
+        .expect("CONTENT_CLASS regex")
 });
 
 /// Matches class/id names indicating article content.
@@ -102,7 +103,8 @@ pub static COMMENT_ID: LazyLock<Regex> = LazyLock::new(|| {
 
 /// Matches author patterns in text.
 pub static AUTHOR_TEXT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(?:by|author|written by|posted by)\s*:?\s*([^,\n]+)").expect("AUTHOR_TEXT regex")
+    Regex::new(r"(?i)(?:by|author|written by|posted by)\s*:?\s*([^,\n]+)")
+        .expect("AUTHOR_TEXT regex")
 });
 
 /// Matches date patterns in various formats.
@@ -118,24 +120,20 @@ pub static DATE_TEXT: LazyLock<Regex> = LazyLock::new(|| {
 // =============================================================================
 
 /// Matches multiple whitespace characters for normalization.
-pub static WHITESPACE_NORMALIZE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\s+").expect("WHITESPACE_NORMALIZE regex")
-});
+pub static WHITESPACE_NORMALIZE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\s+").expect("WHITESPACE_NORMALIZE regex"));
 
 /// Matches leading/trailing whitespace on lines.
-pub static LINE_WHITESPACE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?m)^[ \t]+|[ \t]+$").expect("LINE_WHITESPACE regex")
-});
+pub static LINE_WHITESPACE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)^[ \t]+|[ \t]+$").expect("LINE_WHITESPACE regex"));
 
 /// Matches multiple consecutive newlines.
-pub static MULTIPLE_NEWLINES: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\n{3,}").expect("MULTIPLE_NEWLINES regex")
-});
+pub static MULTIPLE_NEWLINES: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\n{3,}").expect("MULTIPLE_NEWLINES regex"));
 
 /// Matches common separators used between article title and site name.
-pub static TITLE_SEPARATOR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\s*[\|–—\-:]\s*").expect("TITLE_SEPARATOR regex")
-});
+pub static TITLE_SEPARATOR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\s*[\|–—\-:]\s*").expect("TITLE_SEPARATOR regex"));
 
 // =============================================================================
 // CSS Selectors (as strings for use with scraper)

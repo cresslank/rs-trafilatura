@@ -417,7 +417,7 @@ const FORUM_PATHS: &[&str] = &[
 
 /// Forum indicators matched against the full URL.
 const FORUM_URL_PATTERNS: &[&str] = &[
-    "/viewtopic.php", // phpBB
+    "/viewtopic.php",  // phpBB
     "/showthread.php", // vBulletin
     "/item?id=",       // Hacker News
 ];
@@ -463,15 +463,15 @@ const DOCS_PATHS: &[&str] = &[
 const PRODUCT_PATHS: &[&str] = &[
     "/products/",
     "/product/",
-    "/shop/",  // /shop/item-slug
-    "/dp/",    // Amazon
-    "/ip/",    // Walmart
+    "/shop/", // /shop/item-slug
+    "/dp/",   // Amazon
+    "/ip/",   // Walmart
 ];
 
 /// Product page indicators in the domain.
 const PRODUCT_DOMAINS: &[&str] = &[
-    "shop.",   // shop.example.com
-    "store.",  // store.example.com
+    "shop.",  // shop.example.com
+    "store.", // store.example.com
 ];
 
 /// Category/collection page indicators in the URL path.
@@ -481,7 +481,7 @@ const CATEGORY_PATHS: &[&str] = &[
     "/categories/",
     "/category/",
     "/browse/",
-    "/cat/",          // IKEA-style
+    "/cat/", // IKEA-style
     "/subcategory/",
 ];
 
@@ -526,17 +526,13 @@ const LISTING_PATH_ENDINGS: &[&str] = &[
 ];
 
 /// Listing page indicators that match anywhere in the path.
-const LISTING_PATH_CONTAINS: &[&str] = &[
-    "/awards/",
-    "/trending/",
-    "/list/",
-];
+const LISTING_PATH_CONTAINS: &[&str] = &["/awards/", "/trending/", "/list/"];
 
 /// Article/blog indicators in the URL path.
 const ARTICLE_PATHS: &[&str] = &[
     "/blog/",
     "/blog",
-    "/news/",  // /news/ with trailing content = article section
+    "/news/", // /news/ with trailing content = article section
     "/article/",
     "/articles/",
     "/post/",
@@ -638,7 +634,9 @@ pub fn classify_url(url: &str) -> PageType {
     // 6. Listing / content index — path ends with pattern (no further segments)
     {
         let path_trimmed = path.trim_end_matches('/');
-        if LISTING_PATH_ENDINGS.iter().any(|p| path_trimmed.ends_with(p))
+        if LISTING_PATH_ENDINGS
+            .iter()
+            .any(|p| path_trimmed.ends_with(p))
             || contains_any(path, LISTING_PATH_CONTAINS)
         {
             return PageType::Listing;
@@ -794,9 +792,10 @@ pub(crate) fn refine_with_html_signals(url_type: PageType, signals: &HtmlSignals
 
 /// Check if signals indicate a category/listing page via structured data.
 fn has_category_signal(signals: &HtmlSignals) -> bool {
-    let has_collection_ld = signals.ld_types.iter().any(|t| {
-        t == "CollectionPage" || t == "OfferCatalog" || t == "ProductCollection"
-    });
+    let has_collection_ld = signals
+        .ld_types
+        .iter()
+        .any(|t| t == "CollectionPage" || t == "OfferCatalog" || t == "ProductCollection");
 
     // CollectionPage/OfferCatalog are specific to e-commerce → high confidence
     if has_collection_ld {
@@ -804,7 +803,10 @@ fn has_category_signal(signals: &HtmlSignals) -> bool {
     }
 
     // Product with AggregateOffer = price range = category of products
-    let has_product_ld = signals.ld_types.iter().any(|t| t == "Product" || t == "ProductGroup");
+    let has_product_ld = signals
+        .ld_types
+        .iter()
+        .any(|t| t == "Product" || t == "ProductGroup");
     if has_product_ld && signals.has_aggregate_offer {
         return true;
     }
@@ -812,7 +814,10 @@ fn has_category_signal(signals: &HtmlSignals) -> bool {
     // ItemList is used by both category pages AND listicle articles (SEO),
     // so only treat it as a category signal when combined with product elements.
     let has_item_list = signals.ld_types.iter().any(|t| t == "ItemList");
-    if has_item_list && (signals.has_product_grid || signals.product_element_count >= MIN_PRODUCT_ELEMENTS_FOR_CATEGORY) {
+    if has_item_list
+        && (signals.has_product_grid
+            || signals.product_element_count >= MIN_PRODUCT_ELEMENTS_FOR_CATEGORY)
+    {
         return true;
     }
 
@@ -829,7 +834,10 @@ fn has_product_signal(signals: &HtmlSignals) -> bool {
     // og:type containing "product" (but not "product.group" — handled above)
     if let Some(og) = &signals.og_type {
         let og_lower = og.to_ascii_lowercase();
-        if og_lower.contains("product") && og_lower != "product.group" && og_lower != "product:group" {
+        if og_lower.contains("product")
+            && og_lower != "product.group"
+            && og_lower != "product:group"
+        {
             return true;
         }
     }
@@ -858,7 +866,6 @@ fn has_single_product_ld(signals: &HtmlSignals) -> bool {
 // ---------------------------------------------------------------------------
 
 use crate::dom::{Document, Selection};
-use crate::result::Metadata;
 
 /// Forum-specific boilerplate CSS selectors.
 ///
@@ -867,81 +874,81 @@ use crate::result::Metadata;
 /// non-content elements specific to forum platforms.
 const FORUM_BOILERPLATE_SELECTORS: &[&str] = &[
     // === XenForo 2 (physicsforums.com, defence.pk, resetera.com) ===
-    ".message-cell--user",       // User info panel (avatar, stats, badges)
-    ".message-actionBar",        // Reply/report/share action bar
-    ".message-attribution",      // Post number, date permalink
-    ".message-footer",           // Post footer
-    ".message-lastEdit",         // "Last edited" notice
-    ".message-userExtras",       // User join date, message count, etc.
-    "#ai-summary-block",         // XenForo AI summary plugin
-    ".xfa-gptts-block",          // XenForo GPT summary block
-    "[class*='ai-summary']",     // Any AI summary element
-    ".p-body-sidebar",           // Thread sidebar
-    ".p-body-sidebarCol",        // Sidebar column
-    ".js-quickReply",            // Quick reply form
-    ".block-outer",              // Thread status/page nav wrapper
+    ".message-cell--user",   // User info panel (avatar, stats, badges)
+    ".message-actionBar",    // Reply/report/share action bar
+    ".message-attribution",  // Post number, date permalink
+    ".message-footer",       // Post footer
+    ".message-lastEdit",     // "Last edited" notice
+    ".message-userExtras",   // User join date, message count, etc.
+    "#ai-summary-block",     // XenForo AI summary plugin
+    ".xfa-gptts-block",      // XenForo GPT summary block
+    "[class*='ai-summary']", // Any AI summary element
+    ".p-body-sidebar",       // Thread sidebar
+    ".p-body-sidebarCol",    // Sidebar column
+    ".js-quickReply",        // Quick reply form
+    ".block-outer",          // Thread status/page nav wrapper
     // === XenForo 1 (spigotmc.org) ===
-    ".messageUserInfo",          // User info block
-    ".messageUserBlock",         // User block (avatar, name, stats)
-    ".messageDetails",           // Post number, date
-    ".dark_postrating",          // Post ratings
-    ".extraUserInfo",            // Extended user info
+    ".messageUserInfo",  // User info block
+    ".messageUserBlock", // User block (avatar, name, stats)
+    ".messageDetails",   // Post number, date
+    ".dark_postrating",  // Post ratings
+    ".extraUserInfo",    // Extended user info
     // === Discourse (openai, docker, rust-lang, obsidian, etc.) ===
-    ".crawler-post-meta",        // Post metadata (author, date)
+    ".crawler-post-meta",                // Post metadata (author, date)
     "[itemprop='interactionStatistic']", // Like counts
-    ".post-likes",               // Like display
-    "#related-topics",           // Related topics section
-    ".more-topics__list",        // More topics list
+    ".post-likes",                       // Like display
+    "#related-topics",                   // Related topics section
+    ".more-topics__list",                // More topics list
     // === StackExchange ===
-    ".votecell",                 // Vote up/down buttons
-    ".post-layout--left",        // Left column (votes)
-    ".user-info",                // User card (avatar, rep, badges)
-    ".user-gravatar32",          // User avatar
-    "#hot-network-questions",    // Hot network questions sidebar
-    ".js-post-menu",             // Share/edit/follow/flag menu
-    "#post-form",                // Answer form
-    ".related",                  // Related questions sidebar
-    "#sidebar",                  // Sidebar
-    ".comments",                 // SO comment sections under answers
-    ".post-signature",           // SO user signature cards
+    ".votecell",              // Vote up/down buttons
+    ".post-layout--left",     // Left column (votes)
+    ".user-info",             // User card (avatar, rep, badges)
+    ".user-gravatar32",       // User avatar
+    "#hot-network-questions", // Hot network questions sidebar
+    ".js-post-menu",          // Share/edit/follow/flag menu
+    "#post-form",             // Answer form
+    ".related",               // Related questions sidebar
+    "#sidebar",               // Sidebar
+    ".comments",              // SO comment sections under answers
+    ".post-signature",        // SO user signature cards
     // === IPS/Invision Community (prestashop, squarespace, linustechtips) ===
-    ".ipsComment_author",        // Author panel (avatar, name, stats)
-    ".cAuthorPane",              // Author pane
-    ".ipsComment_tools",         // Post action tools
-    ".ipsComment_meta",          // Post metadata
-    ".ipsComment_badges",        // User badges
-    ".ipsSideMenu",              // Side menu
-    ".ipsWidget",                // Sidebar widgets (Top Posters, etc.)
-    "[data-role='replyArea']",   // Reply prompt
+    ".ipsComment_author",      // Author panel (avatar, name, stats)
+    ".cAuthorPane",            // Author pane
+    ".ipsComment_tools",       // Post action tools
+    ".ipsComment_meta",        // Post metadata
+    ".ipsComment_badges",      // User badges
+    ".ipsSideMenu",            // Side menu
+    ".ipsWidget",              // Sidebar widgets (Top Posters, etc.)
+    "[data-role='replyArea']", // Reply prompt
     // === Hacker News ===
-    ".pagetop",                  // Top navigation bar
-    ".yclinks",                  // Footer links
-    ".morelink",                 // "More" pagination
-    "td.subtext",                // Post score/metadata line
-    ".comhead",                  // Comment metadata (user, date, nav links)
-    ".votelinks",                // Vote arrows
-    "td.ind",                    // Indent spacer images
-    ".fatitem .title",           // Post title (already in metadata)
+    ".pagetop",        // Top navigation bar
+    ".yclinks",        // Footer links
+    ".morelink",       // "More" pagination
+    "td.subtext",      // Post score/metadata line
+    ".comhead",        // Comment metadata (user, date, nav links)
+    ".votelinks",      // Vote arrows
+    "td.ind",          // Indent spacer images
+    ".fatitem .title", // Post title (already in metadata)
     // === Discourse ===
-    "aside.onebox",              // Link preview embeds (duplicated text)
+    "aside.onebox", // Link preview embeds (duplicated text)
     // === XenForo quote dedup ===
-    ".bbCodeBlock--quote",       // Quoted text blocks (causes duplication)
-    ".bbCodeBlock--expandable",  // Expandable quote blocks
+    ".bbCodeBlock--quote",      // Quoted text blocks (causes duplication)
+    ".bbCodeBlock--expandable", // Expandable quote blocks
     // === phpBB ===
-    ".postprofile",              // User profile in posts
-    "dl.postprofile",            // Alternative user profile selector
+    ".postprofile",   // User profile in posts
+    "dl.postprofile", // Alternative user profile selector
     // === Reddit (old) ===
-    ".tagline",                  // Comment metadata (user, date, points)
-    ".child .midcol",            // Vote arrows in comments
+    ".tagline",       // Comment metadata (user, date, points)
+    ".child .midcol", // Vote arrows in comments
     // === Slashdot ===
-    ".commentTop",               // Comment metadata header
+    ".commentTop", // Comment metadata header
     // === Generic forum patterns ===
-    ".post-actions",             // Action buttons
-    ".post-toolbar",             // Post toolbar
-    ".reply-button",             // Reply button
-    ".share-button",             // Share button
-    ".user-signature",           // User signatures
-    ".signature",                // User signatures (alt)
+    ".post-actions",   // Action buttons
+    ".post-toolbar",   // Post toolbar
+    ".reply-button",   // Reply button
+    ".share-button",   // Share button
+    ".user-signature", // User signatures
+    ".signature",      // User signatures (alt)
 ];
 
 /// Boilerplate selectors for product pages.
@@ -1011,38 +1018,38 @@ const PRODUCT_BOILERPLATE_SELECTORS: &[&str] = &[
 /// Boilerplate selectors for documentation pages.
 const DOC_BOILERPLATE_SELECTORS: &[&str] = &[
     // Sphinx sidebar and navigation
-    "div.sphinxsidebar",         // Sphinx left sidebar (ToC, search)
-    "div.related",               // Sphinx breadcrumb/navigation bars
-    "a.headerlink",              // Pilcrow (¶) paragraph anchor links
+    "div.sphinxsidebar", // Sphinx left sidebar (ToC, search)
+    "div.related",       // Sphinx breadcrumb/navigation bars
+    "a.headerlink",      // Pilcrow (¶) paragraph anchor links
     // SQLAlchemy custom theme
-    "#docs-sidebar",             // Left sidebar nav tree
-    "#docs-sidebar-popout",      // Top sidebar with site title
-    "#docs-bottom-navigation",   // Previous/Next + copyright
+    "#docs-sidebar",           // Left sidebar nav tree
+    "#docs-sidebar-popout",    // Top sidebar with site title
+    "#docs-bottom-navigation", // Previous/Next + copyright
     // Django docs
-    "[role='complementary']",    // Django sidebar (ToC, donation)
-    "nav.browse-horizontal",     // Django previous/next navigation
+    "[role='complementary']", // Django sidebar (ToC, donation)
+    "nav.browse-horizontal",  // Django previous/next navigation
     // ReadTheDocs
-    ".rst-other-versions",       // Version selector
-    "nav.wy-nav-side",           // RTD left sidebar
+    ".rst-other-versions", // Version selector
+    "nav.wy-nav-side",     // RTD left sidebar
     // Rustdoc
-    ".sidebar",                  // Rustdoc left sidebar (module list, search)
-    ".sidebar-elems",            // Rustdoc sidebar elements (methods, traits)
-    ".sidebar-crate",            // Rustdoc crate name in sidebar
-    "a.src",                     // Rustdoc [src] source links
+    ".sidebar",       // Rustdoc left sidebar (module list, search)
+    ".sidebar-elems", // Rustdoc sidebar elements (methods, traits)
+    ".sidebar-crate", // Rustdoc crate name in sidebar
+    "a.src",          // Rustdoc [src] source links
     // MDN Web Docs
-    ".left-sidebar",             // MDN left sidebar (API reference tree)
-    ".reference-toc",            // MDN right sidebar (on-this-page ToC)
-    ".document-toc",             // MDN table of contents
-    ".bc-table",                 // MDN browser compatibility table
+    ".left-sidebar",  // MDN left sidebar (API reference tree)
+    ".reference-toc", // MDN right sidebar (on-this-page ToC)
+    ".document-toc",  // MDN table of contents
+    ".bc-table",      // MDN browser compatibility table
     // PostgreSQL
-    "div.navheader",             // PostgreSQL top navigation
-    "div.navfooter",             // PostgreSQL bottom navigation
+    "div.navheader", // PostgreSQL top navigation
+    "div.navfooter", // PostgreSQL bottom navigation
     // Generic doc patterns
-    "nav.toc",                   // Table of contents nav
-    ".nav-sidebar",              // Sidebar navigation
-    ".docs-sidebar",             // Documentation sidebar
-    ".page-nav",                 // Page navigation (prev/next)
-    ".breadcrumb",               // Breadcrumbs
+    "nav.toc",       // Table of contents nav
+    ".nav-sidebar",  // Sidebar navigation
+    ".docs-sidebar", // Documentation sidebar
+    ".page-nav",     // Page navigation (prev/next)
+    ".breadcrumb",   // Breadcrumbs
 ];
 
 /// Boilerplate selectors for service/marketing pages.
@@ -1099,11 +1106,14 @@ const ADD_TO_CART_PATTERNS: &[&str] = &[
 /// This is intentionally lightweight — it avoids re-parsing the full
 /// metadata and only looks for signals relevant to page type refinement.
 #[must_use]
-pub(crate) fn extract_html_signals(doc: &crate::dom::Document, metadata: &crate::result::Metadata) -> HtmlSignals {
+pub(crate) fn extract_html_signals(
+    doc: &crate::dom::Document,
+    metadata: &crate::result::Metadata,
+) -> HtmlSignals {
     let mut signals = HtmlSignals::default();
 
     // 1. og:type — already extracted by metadata module
-    signals.og_type = metadata.page_type.clone();
+    signals.og_type.clone_from(&metadata.page_type);
 
     // 2. JSON-LD @type values — scan for Product/ProductGroup
     signals.ld_types = extract_ld_types(doc);
@@ -1115,8 +1125,8 @@ pub(crate) fn extract_html_signals(doc: &crate::dom::Document, metadata: &crate:
     signals.has_product_grid = has_pattern_in_classes(doc, PRODUCT_GRID_PATTERNS);
 
     // 4. Add-to-cart patterns — check class/id attributes and button text
-    signals.has_add_to_cart = has_pattern_in_classes(doc, ADD_TO_CART_PATTERNS)
-        || has_cart_button_text(doc);
+    signals.has_add_to_cart =
+        has_pattern_in_classes(doc, ADD_TO_CART_PATTERNS) || has_cart_button_text(doc);
 
     // 5. Count product-class elements (product-card, product-tile, product-item, etc.)
     signals.product_element_count = count_product_elements(doc);
@@ -1196,10 +1206,11 @@ fn check_aggregate_offer(value: &serde_json::Value) -> bool {
     match value {
         serde_json::Value::Object(map) => {
             // Check if this is a Product with AggregateOffer in offers
-            let is_product = map.get("@type").map_or(false, |t| match t {
+            let is_product = map.get("@type").is_some_and(|t| match t {
                 serde_json::Value::String(s) => s == "Product" || s == "ProductGroup",
                 serde_json::Value::Array(arr) => arr.iter().any(|v| {
-                    v.as_str().map_or(false, |s| s == "Product" || s == "ProductGroup")
+                    v.as_str()
+                        .is_some_and(|s| s == "Product" || s == "ProductGroup")
                 }),
                 _ => false,
             });
@@ -1294,13 +1305,13 @@ fn has_pattern_in_classes(doc: &Document, patterns: &[&str]) -> bool {
 
 /// Check if any button/a element contains add-to-cart text.
 fn has_cart_button_text(doc: &Document) -> bool {
-    for node in doc.select("button, a.btn, a.button, input[type='submit']").nodes() {
+    for node in doc
+        .select("button, a.btn, a.button, input[type='submit']")
+        .nodes()
+    {
         let sel = Selection::from(*node);
         let text = sel.text().to_lowercase();
-        if text.contains("add to cart")
-            || text.contains("add to bag")
-            || text.contains("buy now")
-        {
+        if text.contains("add to cart") || text.contains("add to bag") || text.contains("buy now") {
             return true;
         }
     }
@@ -1326,9 +1337,7 @@ const DOCS_NAV_PATTERNS: &[&str] = &[
 ];
 
 /// Broader class patterns — reliable for docs when combined with code blocks.
-const DOCS_NAV_BROAD_PATTERNS: &[&str] = &[
-    "sidebar",
-];
+const DOCS_NAV_BROAD_PATTERNS: &[&str] = &["sidebar"];
 
 /// Check if the document has documentation-style navigation.
 ///
@@ -1409,7 +1418,10 @@ fn count_product_elements(doc: &Document) -> usize {
     for node in doc.select("[class]").nodes() {
         let sel = Selection::from(*node);
         let class = sel.attr("class").unwrap_or_default().to_lowercase();
-        if PRODUCT_ITEM_CLASS_PATTERNS.iter().any(|p| class.contains(p)) {
+        if PRODUCT_ITEM_CLASS_PATTERNS
+            .iter()
+            .any(|p| class.contains(p))
+        {
             count += 1;
         }
     }
@@ -1421,7 +1433,7 @@ fn count_product_elements(doc: &Document) -> usize {
 // ---------------------------------------------------------------------------
 
 /// Extract domain and path from a lowercased URL.
-fn extract_domain_path<'a>(url: &'a str) -> (&'a str, &'a str) {
+fn extract_domain_path(url: &str) -> (&str, &str) {
     // Strip protocol
     let without_proto = url
         .strip_prefix("https://")
@@ -1448,6 +1460,7 @@ fn contains_any(haystack: &str, needles: &[&str]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::result::Metadata;
 
     // --- URL classification tests ---
 
@@ -1959,14 +1972,8 @@ mod tests {
             extract_domain_path("http://docs.example.com/"),
             ("docs.example.com", "/")
         );
-        assert_eq!(
-            extract_domain_path("example.com"),
-            ("example.com", "/")
-        );
-        assert_eq!(
-            extract_domain_path("/just/a/path"),
-            ("", "/just/a/path")
-        );
+        assert_eq!(extract_domain_path("example.com"), ("example.com", "/"));
+        assert_eq!(extract_domain_path("/just/a/path"), ("", "/just/a/path"));
     }
 
     #[test]
@@ -2084,6 +2091,5 @@ mod tests {
         assert_eq!(refined, PageType::Product);
     }
 }
-
 
 pub(crate) mod ml;

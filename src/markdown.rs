@@ -80,7 +80,10 @@ pub fn escape_markdown(text: &str, in_code_block: bool) -> String {
 /// by the converter when `escape_special_chars(true)` is set. This function
 /// is no longer called internally but is kept for backwards compatibility.
 #[must_use]
-#[deprecated(since = "0.1.2", note = "Use quick_html2md's built-in escape_special_chars option instead")]
+#[deprecated(
+    since = "0.1.2",
+    note = "Use quick_html2md's built-in escape_special_chars option instead"
+)]
 pub fn post_process_markdown(markdown: &str) -> String {
     if markdown.is_empty() {
         return String::new();
@@ -107,14 +110,13 @@ pub fn post_process_markdown(markdown: &str) -> String {
                     result.push('`');
                 }
                 continue;
-            } else {
-                // Not a fence, handle as inline code
-                for _ in 0..backtick_count {
-                    result.push('`');
-                }
-                in_inline_code = !in_inline_code;
-                continue;
             }
+            // Not a fence, handle as inline code
+            for _ in 0..backtick_count {
+                result.push('`');
+            }
+            in_inline_code = !in_inline_code;
+            continue;
         }
 
         // Track inline code
@@ -184,12 +186,10 @@ pub fn post_process_markdown(markdown: &str) -> String {
         }
 
         // Preserve list markers at line start
-        if line_start && (ch == '-' || ch == '*' || ch == '+') {
-            if chars.peek() == Some(&' ') {
-                result.push(ch);
-                line_start = false;
-                continue;
-            }
+        if line_start && (ch == '-' || ch == '*' || ch == '+') && chars.peek() == Some(&' ') {
+            result.push(ch);
+            line_start = false;
+            continue;
         }
 
         // For asterisks and underscores, we need context-aware escaping
@@ -207,13 +207,13 @@ pub fn post_process_markdown(markdown: &str) -> String {
             // Check for *italic* or _emphasis_ (single char, surrounded by non-chars)
             // Look back at what's in result
             let prev = result.chars().last();
-            let prev_is_space = prev.map_or(true, |c| c.is_whitespace());
-            let prev_is_word = prev.map_or(false, |c| c.is_alphanumeric());
+            let prev_is_space = prev.is_none_or(char::is_whitespace);
+            let prev_is_word = prev.is_some_and(char::is_alphanumeric);
 
             // Look at what comes after the potential marker
             let after_marker = if is_double { next2 } else { next1 };
-            let next_is_word = after_marker.map_or(false, |c| c.is_alphanumeric());
-            let next_is_space = after_marker.map_or(true, |c| c.is_whitespace() || c == ch);
+            let next_is_word = after_marker.is_some_and(char::is_alphanumeric);
+            let next_is_space = after_marker.is_none_or(|c| c.is_whitespace() || c == ch);
 
             if is_double {
                 // ** or __ - likely bold/strong opening or closing
@@ -247,12 +247,10 @@ pub fn post_process_markdown(markdown: &str) -> String {
                 continue;
             }
         }
-        if ch == ']' {
-            if chars.peek() == Some(&'(') {
-                result.push(ch);
-                line_start = false;
-                continue;
-            }
+        if ch == ']' && chars.peek() == Some(&'(') {
+            result.push(ch);
+            line_start = false;
+            continue;
         }
 
         // Preserve < and > in HTML-like contexts (e.g., <https://...>)
@@ -312,9 +310,9 @@ pub fn html_table_to_markdown(table_html: &str) -> String {
             let mut row = Vec::new();
             for th in tr.select("th").iter() {
                 let text = th.text().trim().to_string();
-                let align = th.attr("align")
-                    .map(|a| Alignment::from_str(&a))
-                    .unwrap_or(Alignment::None);
+                let align = th
+                    .attr("align")
+                    .map_or(Alignment::None, |a| Alignment::from_str(&a));
                 alignments.push(align);
                 row.push(text);
             }
@@ -334,9 +332,9 @@ pub fn html_table_to_markdown(table_html: &str) -> String {
 
             // Capture alignment from first row if no header
             if !has_header && rows.is_empty() {
-                let align = cell.attr("align")
-                    .map(|a| Alignment::from_str(&a))
-                    .unwrap_or(Alignment::None);
+                let align = cell
+                    .attr("align")
+                    .map_or(Alignment::None, |a| Alignment::from_str(&a));
                 alignments.push(align);
             } else if i < alignments.len() && alignments[i] == Alignment::None {
                 // Update alignment if not set
@@ -357,7 +355,7 @@ pub fn html_table_to_markdown(table_html: &str) -> String {
     }
 
     // Calculate column widths
-    let col_count = rows.iter().map(|r| r.len()).max().unwrap_or(0);
+    let col_count = rows.iter().map(std::vec::Vec::len).max().unwrap_or(0);
     let mut col_widths: Vec<usize> = vec![3; col_count]; // Minimum width for ---
 
     for row in &rows {
@@ -382,7 +380,11 @@ pub fn html_table_to_markdown(table_html: &str) -> String {
         for (col_idx, cell) in row.iter().enumerate() {
             let width = col_widths.get(col_idx).copied().unwrap_or(3);
             output.push(' ');
-            output.push_str(&pad_cell(cell, width, alignments.get(col_idx).copied().unwrap_or(Alignment::None)));
+            output.push_str(&pad_cell(
+                cell,
+                width,
+                alignments.get(col_idx).copied().unwrap_or(Alignment::None),
+            ));
             output.push_str(" |");
         }
         // Pad missing cells
@@ -527,8 +529,14 @@ mod tests {
         let result = post_process_markdown(input);
         eprintln!("Input:  {input}");
         eprintln!("Result: {result}");
-        assert!(result.contains("**bold**"), "Expected **bold** but got: {result}");
-        assert!(result.contains("*italic*"), "Expected *italic* but got: {result}");
+        assert!(
+            result.contains("**bold**"),
+            "Expected **bold** but got: {result}"
+        );
+        assert!(
+            result.contains("*italic*"),
+            "Expected *italic* but got: {result}"
+        );
     }
 
     #[test]

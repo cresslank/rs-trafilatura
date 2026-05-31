@@ -1,3 +1,11 @@
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    deprecated
+)]
+
 //! Markdown output example for rs-trafilatura.
 //!
 //! This example demonstrates how to extract content as GitHub Flavored Markdown.
