@@ -2,7 +2,10 @@
 //! Used by the text-extraction-benchmark Python wrapper.
 
 use rs_trafilatura::page_type::PageType;
-use rs_trafilatura::{extract_with_options, Options, StructuredFacts, StructuredFactsOptions};
+use rs_trafilatura::{
+    extract_with_options, render_structured_facts_for_extraction, Options, StructuredFacts,
+    StructuredFactsOptions, StructuredFactsRenderOptions,
+};
 use serde::Serialize;
 use std::io::{self, Read};
 
@@ -26,6 +29,8 @@ struct Output {
     content_markdown: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     structured_facts: Option<StructuredFacts>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    structured_facts_markdown: Option<String>,
 }
 
 fn main() {
@@ -37,6 +42,7 @@ fn main() {
     let mut hybrid = false;
     let mut markdown = false;
     let mut structured_facts = false;
+    let mut render_structured_facts = false;
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -74,6 +80,11 @@ fn main() {
             }
             "--structured-facts" => {
                 structured_facts = true;
+                i += 1;
+            }
+            "--render-structured-facts" => {
+                structured_facts = true;
+                render_structured_facts = true;
                 i += 1;
             }
             _ => {
@@ -122,18 +133,31 @@ fn main() {
 
     // Output JSON
     let output = match result {
-        Ok(r) => Output {
-            title: r.metadata.title,
-            author: r.metadata.author,
-            date: r.metadata.date.map(|d| d.to_rfc3339()),
-            main_content: r.content_text,
-            page_type: r.metadata.page_type,
-            classification_confidence: r.classification_confidence,
-            confidence: r.extraction_quality,
-            content_html: if hybrid { r.content_html } else { None },
-            content_markdown: if markdown { r.content_markdown } else { None },
-            structured_facts: r.structured_facts,
-        },
+        Ok(r) => {
+            let rendered_facts = if render_structured_facts {
+                r.structured_facts.as_ref().map(|facts| {
+                    render_structured_facts_for_extraction(
+                        facts,
+                        &StructuredFactsRenderOptions::default(),
+                    )
+                })
+            } else {
+                None
+            };
+            Output {
+                title: r.metadata.title,
+                author: r.metadata.author,
+                date: r.metadata.date.map(|d| d.to_rfc3339()),
+                main_content: r.content_text,
+                page_type: r.metadata.page_type,
+                classification_confidence: r.classification_confidence,
+                confidence: r.extraction_quality,
+                content_html: if hybrid { r.content_html } else { None },
+                content_markdown: if markdown { r.content_markdown } else { None },
+                structured_facts: r.structured_facts,
+                structured_facts_markdown: rendered_facts,
+            }
+        }
         Err(_) => Output {
             title: None,
             author: None,
@@ -145,6 +169,7 @@ fn main() {
             content_html: None,
             content_markdown: None,
             structured_facts: None,
+            structured_facts_markdown: None,
         },
     };
 

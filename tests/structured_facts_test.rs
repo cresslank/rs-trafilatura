@@ -499,6 +499,27 @@ fn extract_stdin_structured_facts_flag_emits_empty_arrays_and_preserves_markdown
     assert_eq!(without["content_markdown"], with["content_markdown"]);
 }
 
+#[test]
+fn extract_stdin_can_render_structured_facts_markdown() {
+    let html = r#"<html><body><article><p>Main article text with enough words to extract cleanly and keep the extractor satisfied.</p><a href="mailto:support@example.test?subject=Parser%20Eval">Email support</a></article></body></html>"#;
+    let bin = env!("CARGO_BIN_EXE_extract_stdin");
+
+    let output = run_extract_stdin(
+        bin,
+        &[
+            "--url",
+            "https://example.com/base/page.html",
+            "--render-structured-facts",
+        ],
+        html,
+    );
+
+    let rendered = output["structured_facts_markdown"].as_str().unwrap();
+    assert!(rendered.contains("support@example.test"));
+    assert!(rendered.contains("Parser Eval"));
+    assert!(output.get("structured_facts").is_some());
+}
+
 fn run_extract_stdin(bin: &str, args: &[&str], html: &str) -> serde_json::Value {
     let mut child = Command::new(bin)
         .args(args)
