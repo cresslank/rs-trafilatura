@@ -351,6 +351,16 @@ pub fn render_structured_facts_for_extraction(
                 options.max_chars,
                 &redact_sensitive_query_values(&link.href),
             );
+            if let Some(title) = &link.title {
+                append_capped(&mut out, options.max_chars, " title=\"");
+                append_capped(&mut out, options.max_chars, title);
+                append_capped(&mut out, options.max_chars, "\"");
+            }
+            if let Some(download) = &link.download {
+                append_capped(&mut out, options.max_chars, " download=\"");
+                append_capped(&mut out, options.max_chars, download);
+                append_capped(&mut out, options.max_chars, "\"");
+            }
             if let Some(email) = &link.email {
                 append_capped(&mut out, options.max_chars, " email=");
                 append_capped(&mut out, options.max_chars, email);
@@ -394,6 +404,36 @@ pub fn render_structured_facts_for_extraction(
         }
     }
 
+    if !facts.images.is_empty() {
+        out.push_str("\nImages:\n");
+        for image in facts.images.iter().take(options.max_media) {
+            append_capped(&mut out, options.max_chars, "- image");
+            if let Some(alt) = &image.alt {
+                append_capped(&mut out, options.max_chars, " alt=\"");
+                append_capped(&mut out, options.max_chars, alt);
+                append_capped(&mut out, options.max_chars, "\"");
+            }
+            if let Some(title) = &image.title {
+                append_capped(&mut out, options.max_chars, " title=\"");
+                append_capped(&mut out, options.max_chars, title);
+                append_capped(&mut out, options.max_chars, "\"");
+            }
+            if let Some(caption) = &image.caption {
+                append_capped(&mut out, options.max_chars, " caption=\"");
+                append_capped(&mut out, options.max_chars, caption);
+                append_capped(&mut out, options.max_chars, "\"");
+            }
+            append_capped(&mut out, options.max_chars, " src=");
+            append_capped(&mut out, options.max_chars, &image.src);
+            if let Some(heading) = &image.nearest_heading {
+                append_capped(&mut out, options.max_chars, " section=\"");
+                append_capped(&mut out, options.max_chars, heading);
+                append_capped(&mut out, options.max_chars, "\"");
+            }
+            append_capped(&mut out, options.max_chars, "\n");
+        }
+    }
+
     if !facts.media.is_empty() {
         out.push_str("\nMedia:\n");
         for media in facts.media.iter().take(options.max_media) {
@@ -433,6 +473,22 @@ pub fn render_structured_facts_for_extraction(
                 append_capped(&mut out, options.max_chars, &table.headers.join(" | "));
             }
             append_capped(&mut out, options.max_chars, "\n");
+            for row in table.rows.iter().take(options.max_tables.max(1) * 3) {
+                append_capped(&mut out, options.max_chars, "  row: ");
+                append_capped(&mut out, options.max_chars, &row.join(" | "));
+                append_capped(&mut out, options.max_chars, "\n");
+                for (header, value) in table.headers.iter().zip(row.iter()) {
+                    append_capped(&mut out, options.max_chars, "    ");
+                    append_capped(&mut out, options.max_chars, header);
+                    append_capped(&mut out, options.max_chars, "=");
+                    append_capped(&mut out, options.max_chars, value);
+                    if let Some(normalized) = normalized_numeric_token(value) {
+                        append_capped(&mut out, options.max_chars, " normalized=");
+                        append_capped(&mut out, options.max_chars, &normalized);
+                    }
+                    append_capped(&mut out, options.max_chars, "\n");
+                }
+            }
         }
     }
 
@@ -495,6 +551,30 @@ fn append_capped(out: &mut String, max_chars: usize, value: &str) {
         }
         out.push_str(&value[..boundary]);
     }
+}
+
+fn normalized_numeric_token(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let mut digits = String::new();
+    let mut saw_separator = false;
+    let mut saw_digit = false;
+    for ch in trimmed.chars() {
+        if ch.is_ascii_digit() {
+            digits.push(ch);
+            saw_digit = true;
+        } else if matches!(ch, ',' | '_' | ' ' | '\u{202f}') {
+            saw_separator = true;
+        } else if matches!(ch, '$' | '€' | '£' | '%' | '.') {
+            // Numeric adornment; keep the literal value above and expose a
+            // compact digit-only alias for downstream schemas that normalize.
+        } else {
+            return None;
+        }
+    }
+    (saw_digit && saw_separator && digits != trimmed).then_some(digits)
 }
 
 fn extract_links(
@@ -780,6 +860,92 @@ fn extract_metadata(
     extract_link_tag_metadata(doc, base_url, options, budget, out);
     extract_json_ld_metadata(doc, base_url, options, budget, out);
     extract_meta_tag_metadata(doc, base_url, options, budget, out);
+    extract_visible_key_value_metadata(doc, options, budget, out);
+}
+
+fn extract_visible_key_value_metadata(
+    doc: &Document,
+    options: &StructuredFactsOptions,
+    budget: &mut CharBudget,
+    out: &mut Vec<MetadataFact>,
+) {
+    let mut seen = HashSet::new();
+    for node in doc.select("p, li, dd").iter() {
+        if out.len() >= options.max_metadata_facts || budget.exhausted() {
+            break;
+        }
+        if is_hidden_context(&node) {
+            continue;
+        }
+        let text = clean_field(&node.text(), options.max_field_chars);
+        let Some((label, value)) = parse_visible_key_value(&text, options.max_field_chars) else {
+            continue;
+        };
+        let path = metadata_path_from_label(&label);
+        let key = format!("visible_text\u{0}{path}\u{0}{value}");
+        if !seen.insert(key) {
+            continue;
+        }
+        let fact = MetadataFact {
+            source: "visible_text".to_string(),
+            path,
+            item_type: None,
+            value,
+            kind: None,
+            label: Some(label),
+        };
+        if budget.try_consume(metadata_fact_chars(&fact)) {
+            out.push(fact);
+        }
+    }
+}
+
+fn parse_visible_key_value(text: &str, max_chars: usize) -> Option<(String, String)> {
+    let trimmed = text.trim();
+    if trimmed.len() > max_chars || trimmed.is_empty() {
+        return None;
+    }
+    let (raw_label, raw_value) = trimmed
+        .split_once(':')
+        .or_else(|| trimmed.split_once(" - "))?;
+    let label = clean_field(raw_label, max_chars);
+    let value = clean_field(raw_value, max_chars);
+    if label.is_empty() || value.is_empty() {
+        return None;
+    }
+    let label_words = label.split_whitespace().count();
+    if label.len() > 48 || label_words > 6 {
+        return None;
+    }
+    if label.chars().any(|ch| {
+        !(ch.is_alphanumeric() || ch.is_whitespace() || matches!(ch, '_' | '-' | '/' | '&'))
+    }) {
+        return None;
+    }
+    if value.split_whitespace().count() > 16 {
+        return None;
+    }
+    Some((label, value))
+}
+
+fn metadata_path_from_label(label: &str) -> String {
+    let mut out = String::new();
+    let mut last_was_sep = false;
+    for ch in label.chars().flat_map(char::to_lowercase) {
+        if ch.is_alphanumeric() {
+            out.push(ch);
+            last_was_sep = false;
+        } else if !last_was_sep {
+            out.push('_');
+            last_was_sep = true;
+        }
+    }
+    let trimmed = out.trim_matches('_').to_string();
+    if trimmed.is_empty() {
+        "field".to_string()
+    } else {
+        trimmed
+    }
 }
 
 fn extract_link_tag_metadata(
@@ -996,16 +1162,25 @@ fn extract_meta_tag_metadata(
 }
 
 fn extract_table_headers(table: &Selection, options: &StructuredFactsOptions) -> Vec<String> {
-    table
-        .select("th")
-        .iter()
-        .filter(|cell| belongs_to_table(cell, table) && !is_hidden_context(cell))
-        .filter_map(|cell| {
-            let text = extract_table_cell_text(&cell, table, options.max_field_chars);
-            (!text.is_empty()).then_some(text)
-        })
-        .take(options.max_table_cells_per_row)
-        .collect()
+    for row in table.select("tr").iter() {
+        if !belongs_to_table(&row, table) || is_hidden_context(&row) {
+            continue;
+        }
+        let cells = direct_table_row_cells(&row, table, options);
+        if cells.is_empty() {
+            continue;
+        }
+        let has_td = row
+            .select("td")
+            .iter()
+            .any(|cell| belongs_to_table(&cell, table) && !is_hidden_context(&cell));
+        let in_thead = has_ancestor_tag(&row, "thead");
+        if in_thead || !has_td {
+            return cells;
+        }
+        break;
+    }
+    Vec::new()
 }
 
 fn extract_table_rows(
@@ -1021,29 +1196,50 @@ fn extract_table_rows(
         if !belongs_to_table(&row, table) || is_hidden_context(&row) {
             continue;
         }
-        if skip_header_rows
-            && row
-                .select("th")
-                .iter()
-                .any(|cell| belongs_to_table(&cell, table) && !is_hidden_context(&cell))
-        {
+        let cells = direct_table_row_cells(&row, table, options);
+        if cells.is_empty() {
             continue;
         }
-        let cells: Vec<String> = row
-            .select("td, th")
-            .iter()
-            .filter(|cell| belongs_to_table(cell, table) && !is_hidden_context(cell))
-            .filter_map(|cell| {
-                let text = extract_table_cell_text(&cell, table, options.max_field_chars);
-                (!text.is_empty()).then_some(text)
-            })
-            .take(options.max_table_cells_per_row)
-            .collect();
-        if !cells.is_empty() {
-            rows.push(cells);
+        if skip_header_rows && row_is_header_only(&row, table) {
+            continue;
         }
+        rows.push(cells);
     }
     rows
+}
+
+fn direct_table_row_cells(
+    row: &Selection,
+    table: &Selection,
+    options: &StructuredFactsOptions,
+) -> Vec<String> {
+    row.select("td, th")
+        .iter()
+        .filter(|cell| belongs_to_table(cell, table) && !is_hidden_context(cell))
+        .filter_map(|cell| {
+            let text = extract_table_cell_text(&cell, table, options.max_field_chars);
+            (!text.is_empty()).then_some(text)
+        })
+        .take(options.max_table_cells_per_row)
+        .collect()
+}
+
+fn row_is_header_only(row: &Selection, table: &Selection) -> bool {
+    if has_ancestor_tag(row, "thead") {
+        return true;
+    }
+    let mut has_cell = false;
+    let mut has_td = false;
+    for cell in row.select("td, th").iter() {
+        if !belongs_to_table(&cell, table) || is_hidden_context(&cell) {
+            continue;
+        }
+        has_cell = true;
+        if tag_name(&cell) == "td" {
+            has_td = true;
+        }
+    }
+    has_cell && !has_td
 }
 
 fn extract_table_cell_text(cell: &Selection, table: &Selection, max_chars: usize) -> String {
@@ -1227,6 +1423,17 @@ fn belongs_to_table(sel: &Selection, table: &Selection) -> bool {
             break;
         }
         current = parent;
+    }
+    false
+}
+
+fn has_ancestor_tag(sel: &Selection, wanted: &str) -> bool {
+    let mut current = sel.parent();
+    while current.length() > 0 {
+        if tag_name(&current) == wanted {
+            return true;
+        }
+        current = current.parent();
     }
     false
 }

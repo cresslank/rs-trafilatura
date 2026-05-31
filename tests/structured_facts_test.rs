@@ -471,6 +471,66 @@ fn renders_compact_high_value_fact_block_without_low_value_link_dump() {
 }
 
 #[test]
+fn renders_attribute_media_table_and_visible_key_value_evidence_generically() {
+    let html = r#"
+        <html><body>
+          <main>
+            <h1>Product page</h1>
+            <p>Status: Ships today</p>
+            <p>Availability - In stock</p>
+            <p>The visible prose intentionally omits several exact attribute values.</p>
+            <a href="/license" title="MIT/X derivative license">open source</a>
+            <figure>
+              <img data-src="/assets/q4-revenue.png" alt="Quarterly revenue chart showing 18 percent Q4 growth" title="Q4 revenue rose 18 percent">
+              <figcaption>Revenue chart</figcaption>
+            </figure>
+            <table>
+              <thead><tr><th>Lane</th><th>Included pages</th><th>Support window</th></tr></thead>
+              <tbody>
+                <tr><th>Selector</th><td>100,000</td><td>next business day</td></tr>
+                <tr><th>Sidecar</th><td>250,000</td><td>four hours</td></tr>
+              </tbody>
+            </table>
+          </main>
+        </body></html>
+    "#;
+
+    let facts = extract_with_options(html, &options_with_structured_facts())
+        .unwrap()
+        .structured_facts
+        .unwrap();
+    assert_eq!(
+        facts.tables[0].headers,
+        vec!["Lane", "Included pages", "Support window"]
+    );
+    assert_eq!(
+        facts.tables[0].rows,
+        vec![
+            vec!["Selector", "100,000", "next business day"],
+            vec!["Sidecar", "250,000", "four hours"],
+        ]
+    );
+
+    let rendered = rs_trafilatura::render_structured_facts_for_extraction(
+        &facts,
+        &rs_trafilatura::StructuredFactsRenderOptions {
+            max_chars: 2400,
+            ..Default::default()
+        },
+    );
+
+    assert!(rendered.contains("MIT/X derivative license"));
+    assert!(rendered.contains("Quarterly revenue chart showing 18 percent Q4 growth"));
+    assert!(rendered.contains("Q4 revenue rose 18 percent"));
+    assert!(rendered.contains("Revenue chart"));
+    assert!(rendered.contains("Status: Ships today"));
+    assert!(rendered.contains("Availability: In stock"));
+    assert!(rendered.contains("Selector | 100,000 | next business day"));
+    assert!(rendered.contains("Included pages=100,000"));
+    assert!(rendered.contains("normalized=100000"));
+}
+
+#[test]
 fn structured_facts_sections_respect_total_character_budget() {
     let html = r#"
         <html><body><article>
