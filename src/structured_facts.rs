@@ -4,7 +4,7 @@
 //! extraction path. They preserve useful attributes for downstream structured
 //! extraction without mutating the default parser output.
 
-use crate::dom::{Document, Selection};
+use crate::dom::{next_element_sibling, Document, Selection};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashSet};
@@ -118,6 +118,8 @@ pub struct LinkFact {
     pub title: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub download: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub nearby_text: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scheme: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -292,6 +294,7 @@ pub(crate) fn extract_structured_facts(
         }
     }
 
+    extract_metadata(doc, base_url, options, &mut budget, &mut facts.metadata);
     extract_links(
         doc,
         base_url,
@@ -316,7 +319,6 @@ pub(crate) fn extract_structured_facts(
         &headings,
         &mut facts.media,
     );
-    extract_metadata(doc, base_url, options, &mut budget, &mut facts.metadata);
     extract_tables(doc, options, &mut budget, &headings, &mut facts.tables);
 
     facts
@@ -351,7 +353,117 @@ pub fn render_structured_facts_for_extraction(
         }
     }
 
+    if !facts.metadata.is_empty() {
+        let document_metadata: Vec<&MetadataFact> = facts
+            .metadata
+            .iter()
+            .filter(|meta| meta.source == "visible_metadata")
+            .collect();
+        if !document_metadata.is_empty() {
+            out.push_str("\nDocument metadata:\n");
+            for meta in document_metadata.iter().take(options.max_metadata) {
+                append_capped(&mut out, options.max_chars, "- ");
+                let label = meta.label.as_deref().unwrap_or(&meta.path);
+                append_capped(&mut out, options.max_chars, label);
+                append_capped(&mut out, options.max_chars, ": ");
+                append_capped(&mut out, options.max_chars, &meta.value);
+                append_capped(&mut out, options.max_chars, "\n");
+            }
+        }
+
+        out.push_str("\nMetadata and schema facts:\n");
+        for meta in facts.metadata.iter().take(options.max_metadata) {
+            append_capped(&mut out, options.max_chars, "- ");
+            let label = meta.label.as_deref().unwrap_or(&meta.path);
+            append_capped(&mut out, options.max_chars, label);
+            append_capped(&mut out, options.max_chars, ": ");
+            append_capped(&mut out, options.max_chars, &meta.value);
+            append_capped(&mut out, options.max_chars, " (");
+            append_capped(&mut out, options.max_chars, &meta.source);
+            append_capped(&mut out, options.max_chars, ")\n");
+        }
+    }
+
+    render_table_evidence(&mut out, facts, options);
+
     if !high_value_links.is_empty() {
+        let rich_links: Vec<&LinkFact> = high_value_links
+            .iter()
+            .copied()
+            .filter(|link| {
+                link.title.is_some()
+                    || link.download.is_some()
+                    || link.email.is_some()
+                    || link.phone.is_some()
+                    || !link.query.is_empty()
+            })
+            .collect();
+        if !rich_links.is_empty() {
+            out.push_str("\nLink evidence (title attributes and nearby visible text):\n");
+            for link in rich_links.iter().take(options.max_links) {
+                append_capped(&mut out, options.max_chars, "- ");
+                let label = if link.text.is_empty() {
+                    "link"
+                } else {
+                    &link.text
+                };
+                append_capped(&mut out, options.max_chars, "text=\"");
+                append_capped(&mut out, options.max_chars, label);
+                append_capped(&mut out, options.max_chars, "\"");
+                if let Some(title) = &link.title {
+                    append_capped(&mut out, options.max_chars, " title attribute=\"");
+                    append_capped(&mut out, options.max_chars, title);
+                    append_capped(&mut out, options.max_chars, "\"");
+                }
+                if let Some(download) = &link.download {
+                    append_capped(&mut out, options.max_chars, " download=\"");
+                    append_capped(&mut out, options.max_chars, download);
+                    append_capped(&mut out, options.max_chars, "\"");
+                }
+                if let Some(email) = &link.email {
+                    append_capped(&mut out, options.max_chars, " email=\"");
+                    append_capped(&mut out, options.max_chars, email);
+                    append_capped(&mut out, options.max_chars, "\"");
+                }
+                if let Some(phone) = &link.phone {
+                    append_capped(&mut out, options.max_chars, " phone=\"");
+                    append_capped(&mut out, options.max_chars, phone);
+                    append_capped(&mut out, options.max_chars, "\"");
+                }
+                if let Some(nearby) = &link.nearby_text {
+                    append_capped(&mut out, options.max_chars, " nearby=\"");
+                    append_capped(&mut out, options.max_chars, nearby);
+                    append_capped(&mut out, options.max_chars, "\"");
+                }
+                if let Some(heading) = &link.nearest_heading {
+                    append_capped(&mut out, options.max_chars, " section=\"");
+                    append_capped(&mut out, options.max_chars, heading);
+                    append_capped(&mut out, options.max_chars, "\"");
+                }
+                append_capped(&mut out, options.max_chars, " href=");
+                append_capped(
+                    &mut out,
+                    options.max_chars,
+                    &redact_sensitive_query_values(&link.href),
+                );
+                append_capped(&mut out, options.max_chars, "\n");
+                if let Some(title) = &link.title {
+                    append_capped(
+                        &mut out,
+                        options.max_chars,
+                        "  use as evidence: link title attribute = ",
+                    );
+                    append_capped(&mut out, options.max_chars, title);
+                    append_capped(&mut out, options.max_chars, "\n");
+                }
+                if let Some(nearby) = &link.nearby_text {
+                    append_capped(&mut out, options.max_chars, "  nearby sentence: ");
+                    append_capped(&mut out, options.max_chars, nearby);
+                    append_capped(&mut out, options.max_chars, "\n");
+                }
+            }
+        }
+
         out.push_str("\nLinks:\n");
         for link in high_value_links.iter().take(options.max_links) {
             append_capped(&mut out, options.max_chars, "- ");
@@ -403,20 +515,6 @@ pub fn render_structured_facts_for_extraction(
                 append_capped(&mut out, options.max_chars, "\"");
             }
             append_capped(&mut out, options.max_chars, "\n");
-        }
-    }
-
-    if !facts.metadata.is_empty() {
-        out.push_str("\nMetadata and schema facts:\n");
-        for meta in facts.metadata.iter().take(options.max_metadata) {
-            append_capped(&mut out, options.max_chars, "- ");
-            let label = meta.label.as_deref().unwrap_or(&meta.path);
-            append_capped(&mut out, options.max_chars, label);
-            append_capped(&mut out, options.max_chars, ": ");
-            append_capped(&mut out, options.max_chars, &meta.value);
-            append_capped(&mut out, options.max_chars, " (");
-            append_capped(&mut out, options.max_chars, &meta.source);
-            append_capped(&mut out, options.max_chars, ")\n");
         }
     }
 
@@ -475,39 +573,6 @@ pub fn render_structured_facts_for_extraction(
         }
     }
 
-    if !facts.tables.is_empty() {
-        out.push_str("\nTables:\n");
-        for table in facts.tables.iter().take(options.max_tables) {
-            append_capped(&mut out, options.max_chars, "- ");
-            append_capped(
-                &mut out,
-                options.max_chars,
-                table.caption.as_deref().unwrap_or("table"),
-            );
-            if !table.headers.is_empty() {
-                append_capped(&mut out, options.max_chars, " headers: ");
-                append_capped(&mut out, options.max_chars, &table.headers.join(" | "));
-            }
-            append_capped(&mut out, options.max_chars, "\n");
-            for row in table.rows.iter().take(options.max_tables.max(1) * 3) {
-                append_capped(&mut out, options.max_chars, "  row: ");
-                append_capped(&mut out, options.max_chars, &row.join(" | "));
-                append_capped(&mut out, options.max_chars, "\n");
-                for (header, value) in table.headers.iter().zip(row.iter()) {
-                    append_capped(&mut out, options.max_chars, "    ");
-                    append_capped(&mut out, options.max_chars, header);
-                    append_capped(&mut out, options.max_chars, "=");
-                    append_capped(&mut out, options.max_chars, value);
-                    if let Some(normalized) = normalized_numeric_token(value) {
-                        append_capped(&mut out, options.max_chars, " normalized=");
-                        append_capped(&mut out, options.max_chars, &normalized);
-                    }
-                    append_capped(&mut out, options.max_chars, "\n");
-                }
-            }
-        }
-    }
-
     let high_value_total = high_value_links.len();
     let rendered_links = high_value_total.min(options.max_links);
     let omitted_high_value = high_value_total.saturating_sub(rendered_links);
@@ -553,6 +618,71 @@ pub fn render_structured_facts_for_extraction(
     out
 }
 
+fn render_table_evidence(
+    out: &mut String,
+    facts: &StructuredFacts,
+    options: &StructuredFactsRenderOptions,
+) {
+    if facts.tables.is_empty() {
+        return;
+    }
+    out.push_str("\nTables:\n");
+    for table in facts.tables.iter().take(options.max_tables) {
+        append_capped(out, options.max_chars, "- ");
+        append_capped(
+            out,
+            options.max_chars,
+            table.caption.as_deref().unwrap_or("table"),
+        );
+        if let Some(heading) = &table.nearest_heading {
+            append_capped(out, options.max_chars, " section=\"");
+            append_capped(out, options.max_chars, heading);
+            append_capped(out, options.max_chars, "\"");
+        }
+        if !table.headers.is_empty() {
+            append_capped(out, options.max_chars, " headers: ");
+            append_capped(out, options.max_chars, &table.headers.join(" | "));
+        }
+        append_capped(out, options.max_chars, "\n");
+        for row in table.rows.iter().take(options.max_tables.max(1) * 3) {
+            let aligned_headers = !table.headers.is_empty() && table.headers.len() == row.len();
+            let row_prefix = if aligned_headers {
+                "  row: "
+            } else {
+                "  row cells: "
+            };
+            append_capped(out, options.max_chars, row_prefix);
+            append_capped(out, options.max_chars, &row.join(" | "));
+            append_capped(out, options.max_chars, "\n");
+            if aligned_headers {
+                for (header, value) in table.headers.iter().zip(row.iter()) {
+                    append_capped(out, options.max_chars, "    ");
+                    append_capped(out, options.max_chars, header);
+                    append_capped(out, options.max_chars, "=");
+                    append_capped(out, options.max_chars, value);
+                    if let Some(normalized) = normalized_numeric_token(value) {
+                        append_capped(out, options.max_chars, " normalized=");
+                        append_capped(out, options.max_chars, &normalized);
+                    }
+                    append_capped(out, options.max_chars, "\n");
+                }
+            } else if let Some(fields) = inferred_mismatched_table_fields(&table.headers, row) {
+                for (header, value) in fields {
+                    append_capped(out, options.max_chars, "    ");
+                    append_capped(out, options.max_chars, &header);
+                    append_capped(out, options.max_chars, "=");
+                    append_capped(out, options.max_chars, &value);
+                    if let Some(normalized) = normalized_numeric_token(&value) {
+                        append_capped(out, options.max_chars, " normalized=");
+                        append_capped(out, options.max_chars, &normalized);
+                    }
+                    append_capped(out, options.max_chars, "\n");
+                }
+            }
+        }
+    }
+}
+
 fn append_capped(out: &mut String, max_chars: usize, value: &str) {
     if out.len() >= max_chars {
         return;
@@ -567,6 +697,48 @@ fn append_capped(out: &mut String, max_chars: usize, value: &str) {
         }
         out.push_str(&value[..boundary]);
     }
+}
+
+fn nearby_link_text(node: &Selection, link_text: &str, max_chars: usize) -> Option<String> {
+    let parent = node.parent();
+    if parent.length() == 0 || is_hidden_context(&parent) {
+        return None;
+    }
+    let text = clean_field(&parent.text(), max_chars);
+    if text.is_empty() || text == link_text || text.split_whitespace().count() < 4 {
+        return None;
+    }
+    Some(text)
+}
+
+fn inferred_mismatched_table_fields(
+    headers: &[String],
+    row: &[String],
+) -> Option<Vec<(String, String)>> {
+    if headers.is_empty() || row.len() != headers.len() + 1 {
+        return None;
+    }
+    let status = row.first()?.trim();
+    let numeric = row.get(1)?.trim();
+    if status.is_empty()
+        || status.len() > 8
+        || !status.chars().all(|ch| ch.is_ascii_alphabetic())
+        || numeric.parse::<u64>().is_err()
+    {
+        return None;
+    }
+    let mut fields = Vec::with_capacity(row.len());
+    fields.push(("Status".to_string(), status.to_string()));
+    for (idx, header) in headers.iter().enumerate() {
+        let value = row.get(idx + 1)?.clone();
+        let label = if idx == 0 && header.eq_ignore_ascii_case("pep") {
+            "PEP number".to_string()
+        } else {
+            header.clone()
+        };
+        fields.push((label, value));
+    }
+    Some(fields)
 }
 
 fn normalized_numeric_token(value: &str) -> Option<String> {
@@ -652,6 +824,7 @@ fn extract_links(
         }
         let href = clean_field(&normalized_href, options.max_field_chars);
         let raw_href_clean = clean_field(raw_href, options.max_field_chars);
+        let nearby_text = nearby_link_text(&node, &text, options.max_field_chars);
         let key = format!("{href}\u{0}{text}\u{0}{title:?}\u{0}{download:?}\u{0}{region:?}");
         if !seen.insert(key) {
             continue;
@@ -662,6 +835,7 @@ fn extract_links(
             raw_href: Some(raw_href_clean).filter(|raw| raw != &normalized_href),
             title,
             download,
+            nearby_text,
             scheme: parts.scheme,
             host: parts.host,
             path: parts.path,
@@ -875,7 +1049,108 @@ fn extract_metadata(
     extract_link_tag_metadata(doc, base_url, options, budget, out);
     extract_json_ld_metadata(doc, base_url, options, budget, out);
     extract_meta_tag_metadata(doc, base_url, options, budget, out);
+    extract_definition_list_metadata(doc, options, budget, out);
     extract_visible_key_value_metadata(doc, options, budget, out);
+}
+
+fn extract_definition_list_metadata(
+    doc: &Document,
+    options: &StructuredFactsOptions,
+    budget: &mut CharBudget,
+    out: &mut Vec<MetadataFact>,
+) {
+    let mut seen = HashSet::new();
+    for term in doc.select("dt").iter() {
+        if out.len() >= options.max_metadata_facts || budget.exhausted() {
+            break;
+        }
+        if is_hidden_context(&term) {
+            continue;
+        }
+        let Some(value_node) = next_element_sibling(&term) else {
+            continue;
+        };
+        if tag_name(&value_node) != "dd" || is_hidden_context(&value_node) {
+            continue;
+        }
+        let label = clean_metadata_label(&term.text(), options.max_field_chars);
+        let value = clean_field(&value_node.text(), options.max_field_chars);
+        push_visible_metadata_fact(
+            out,
+            budget,
+            &mut seen,
+            "visible_metadata",
+            label.clone(),
+            value,
+            options.max_metadata_facts,
+        );
+        if label.eq_ignore_ascii_case("author") || label.eq_ignore_ascii_case("authors") {
+            if out.len() >= options.max_metadata_facts || budget.exhausted() {
+                break;
+            }
+            if let Some(names) = author_names_from_metadata_value(&value_node.text()) {
+                push_visible_metadata_fact(
+                    out,
+                    budget,
+                    &mut seen,
+                    "visible_metadata",
+                    "Author names".to_string(),
+                    names,
+                    options.max_metadata_facts,
+                );
+            }
+        }
+    }
+}
+
+fn clean_metadata_label(raw: &str, max_chars: usize) -> String {
+    clean_field(raw, max_chars)
+        .trim_end_matches(':')
+        .trim()
+        .to_string()
+}
+
+fn push_visible_metadata_fact(
+    out: &mut Vec<MetadataFact>,
+    budget: &mut CharBudget,
+    seen: &mut HashSet<String>,
+    source: &str,
+    label: String,
+    value: String,
+    max_metadata_facts: usize,
+) {
+    if out.len() >= max_metadata_facts || label.is_empty() || value.is_empty() {
+        return;
+    }
+    let path = metadata_path_from_label(&label);
+    let key = format!("{source}\u{0}{path}\u{0}{value}");
+    if !seen.insert(key) {
+        return;
+    }
+    let fact = MetadataFact {
+        source: source.to_string(),
+        path,
+        item_type: None,
+        value,
+        kind: None,
+        label: Some(label),
+    };
+    if budget.try_consume(metadata_fact_chars(&fact)) {
+        out.push(fact);
+    }
+}
+
+fn author_names_from_metadata_value(raw: &str) -> Option<String> {
+    let names: Vec<String> = raw
+        .split([',', ';'])
+        .filter_map(|part| {
+            let without_contact = part.split('<').next().unwrap_or(part);
+            let name = clean_field(without_contact, 96);
+            let word_count = name.split_whitespace().count();
+            (word_count >= 2 && name.chars().any(char::is_alphabetic)).then_some(name)
+        })
+        .collect();
+    (!names.is_empty()).then(|| names.join("; "))
 }
 
 fn extract_visible_key_value_metadata(
@@ -2004,6 +2279,7 @@ fn link_fact_chars(fact: &LinkFact) -> usize {
         + fact.raw_href.as_deref().map_or(0, str::len)
         + fact.title.as_deref().map_or(0, str::len)
         + fact.download.as_deref().map_or(0, str::len)
+        + fact.nearby_text.as_deref().map_or(0, str::len)
         + fact.scheme.as_deref().map_or(0, str::len)
         + fact.host.as_deref().map_or(0, str::len)
         + fact.path.as_deref().map_or(0, str::len)

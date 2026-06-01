@@ -531,6 +531,168 @@ fn renders_attribute_media_table_and_visible_key_value_evidence_generically() {
 }
 
 #[test]
+fn renders_link_title_with_nearby_sentence_as_fact_like_evidence() {
+    let html = r#"
+        <html><body><main>
+          <h1>Anchor Title Attribute Fact</h1>
+          <p>The parser toolkit is <a href="/license" title="MIT/X derivative license">open source</a> and can be embedded in commercial pipelines.</p>
+          <p>The visible sentence intentionally omits the exact license string.</p>
+        </main></body></html>
+    "#;
+
+    let facts = extract_with_options(html, &options_with_structured_facts())
+        .unwrap()
+        .structured_facts
+        .unwrap();
+    let rendered = rs_trafilatura::render_structured_facts_for_extraction(
+        &facts,
+        &rs_trafilatura::StructuredFactsRenderOptions {
+            max_chars: 1400,
+            ..Default::default()
+        },
+    );
+
+    assert!(rendered.contains("Link evidence (title attributes and nearby visible text):"));
+    assert!(rendered.contains("text=\"open source\""));
+    assert!(rendered.contains("title attribute=\"MIT/X derivative license\""));
+    assert!(rendered.contains("use as evidence: link title attribute = MIT/X derivative license"));
+    assert!(rendered.contains(
+        "nearby=\"The parser toolkit is open source and can be embedded in commercial pipelines."
+    ));
+    assert!(rendered.contains("section=\"Anchor Title Attribute Fact\""));
+}
+
+#[test]
+fn extracts_definition_list_metadata_as_clean_document_metadata() {
+    let html = r#"
+        <html><body><article>
+          <h1>PEP 8 – Style Guide for Python Code</h1>
+          <dl>
+            <dt>Author<span class="colon">:</span></dt>
+            <dd>Guido van Rossum &lt;guido at python.org&gt;,<br>Barry Warsaw &lt;barry at python.org&gt;,<br>Alyssa Coghlan &lt;ncoghlan at gmail.com&gt;</dd>
+            <dt>Status<span class="colon">:</span></dt><dd>Active</dd>
+            <dt>Created<span class="colon">:</span></dt><dd>05-Jul-2001</dd>
+          </dl>
+          <p>Main article text with enough words to extract cleanly and keep the extractor satisfied.</p>
+        </article></body></html>
+    "#;
+
+    let facts = extract_with_options(html, &options_with_structured_facts())
+        .unwrap()
+        .structured_facts
+        .unwrap();
+    assert!(facts.metadata.iter().any(|m| m.source == "visible_metadata"
+        && m.label.as_deref() == Some("Author")
+        && m.value.contains("Guido van Rossum")));
+    assert!(facts.metadata.iter().any(|m| m.source == "visible_metadata"
+        && m.label.as_deref() == Some("Author names")
+        && m.value == "Guido van Rossum; Barry Warsaw; Alyssa Coghlan"));
+
+    let rendered = rs_trafilatura::render_structured_facts_for_extraction(
+        &facts,
+        &rs_trafilatura::StructuredFactsRenderOptions {
+            max_chars: 1400,
+            ..Default::default()
+        },
+    );
+    assert!(rendered.contains("Document metadata:"));
+    assert!(rendered.contains("Author: Guido van Rossum"));
+    assert!(rendered.contains("Author names: Guido van Rossum; Barry Warsaw; Alyssa Coghlan"));
+}
+
+#[test]
+fn renders_mismatched_table_rows_without_misleading_header_pairs() {
+    let html = r#"
+        <html><body><main>
+          <h2>Process and Meta-PEPs</h2>
+          <table>
+            <thead><tr><th>PEP</th><th>Title</th><th>Authors</th></tr></thead>
+            <tbody>
+              <tr><td>PA</td><td>609</td><td>Python Packaging Authority (PyPA) Governance</td><td>Dustin Ingram, Pradyun Gedam, Sumana Harihareswara</td></tr>
+              <tr><td>PA</td><td>772</td><td>Packaging Council governance process</td><td>Barry Warsaw, Deb Nicholson, Pradyun Gedam</td></tr>
+            </tbody>
+          </table>
+          <p>Main article text with enough words to extract cleanly and keep the extractor satisfied.</p>
+        </main></body></html>
+    "#;
+
+    let facts = extract_with_options(html, &options_with_structured_facts())
+        .unwrap()
+        .structured_facts
+        .unwrap();
+    let rendered = rs_trafilatura::render_structured_facts_for_extraction(
+        &facts,
+        &rs_trafilatura::StructuredFactsRenderOptions {
+            max_chars: 1600,
+            ..Default::default()
+        },
+    );
+
+    assert!(rendered.contains("section=\"Process and Meta-PEPs\""));
+    assert!(rendered.contains("row cells: PA | 609 | Python Packaging Authority (PyPA) Governance"));
+    assert!(rendered.contains("PEP number=609"));
+    assert!(rendered.contains("Title=Python Packaging Authority (PyPA) Governance"));
+    assert!(!rendered.contains("PEP=PA"));
+    assert!(!rendered.contains("Title=609"));
+    assert!(!rendered.contains("Authors=Python Packaging Authority (PyPA) Governance"));
+}
+
+#[test]
+fn prioritizes_document_metadata_before_bulk_links_under_budget() {
+    let mut html = String::from("<html><body><article><dl><dt>Author</dt><dd>Guido van Rossum &lt;guido at python.org&gt;, Barry Warsaw &lt;barry at python.org&gt;</dd></dl>");
+    for idx in 0..20 {
+        html.push_str(&format!(
+            "<a href=\"/section-{idx}\">Verbose reference link number {idx}</a>"
+        ));
+    }
+    html.push_str("<p>Main article text with enough words to extract cleanly and keep the extractor satisfied.</p></article></body></html>");
+
+    let opts = Options {
+        url: Some("https://example.com/doc".to_string()),
+        structured_facts: Some(StructuredFactsOptions {
+            max_total_chars: 220,
+            ..StructuredFactsOptions::default()
+        }),
+        ..Options::default()
+    };
+    let facts = extract_with_options(&html, &opts)
+        .unwrap()
+        .structured_facts
+        .unwrap();
+
+    assert!(facts
+        .metadata
+        .iter()
+        .any(|m| m.source == "visible_metadata" && m.label.as_deref() == Some("Author")));
+}
+
+#[test]
+fn renders_document_metadata_before_bulk_link_evidence_under_render_budget() {
+    let mut html = String::from("<html><body><article><dl><dt>Author</dt><dd>Guido van Rossum &lt;guido at python.org&gt;, Barry Warsaw &lt;barry at python.org&gt;</dd></dl>");
+    for idx in 0..20 {
+        html.push_str(&format!(
+            "<p><a href=\"/section-{idx}\" title=\"Reference title {idx}\">Verbose reference link number {idx}</a> with surrounding context that makes the link evidence long.</p>"
+        ));
+    }
+    html.push_str("<p>Main article text with enough words to extract cleanly and keep the extractor satisfied.</p></article></body></html>");
+
+    let facts = extract_with_options(&html, &options_with_structured_facts())
+        .unwrap()
+        .structured_facts
+        .unwrap();
+    let rendered = rs_trafilatura::render_structured_facts_for_extraction(
+        &facts,
+        &rs_trafilatura::StructuredFactsRenderOptions {
+            max_chars: 600,
+            ..Default::default()
+        },
+    );
+
+    assert!(rendered.contains("Document metadata:"));
+    assert!(rendered.contains("Author: Guido van Rossum"));
+}
+
+#[test]
 fn firecrawl_seam_payloads_render_relative_image_and_heading_evidence_without_url() {
     let image_html = r#"
         <!DOCTYPE html><html lang="en"><body><main>
